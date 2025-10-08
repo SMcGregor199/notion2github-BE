@@ -32,3 +32,7 @@ const n2m = new NotionToMarkdown({notionClient:notion, config:{parseChildPages:f
     console.log(mdblocks);
     console.log(mdString.parent); // this is the markdown itself.
 })()
+
+function mdMetadata(page_id){
+
+}
