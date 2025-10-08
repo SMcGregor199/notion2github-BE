@@ -13,7 +13,7 @@ const notion = new Client({
 
 
 //passing the notion client to the option
-const n2m = new NotionToMarkdown({notionClient:notion});
+const n2m = new NotionToMarkdown({notionClient:notion, config:{parseChildPages:false}});
 
 
 
@@ -27,7 +27,8 @@ const n2m = new NotionToMarkdown({notionClient:notion});
 // })()
 
 ;(async ()=>{
-    const mdblocks=await n2m.pageToMarkdown(NOTION_PAGE_ID); //returns an array
-    const mdString = n2m.toMarkdownString(mdblocks);
-    console.log(mdString.parent);
+    const mdblocks= await n2m.pageToMarkdown(NOTION_PAGE_ID); //returns an array with all the page's blocks
+    const mdString = n2m.toMarkdownString(mdblocks); // this returns an object that points to the markdown
+    console.log(mdblocks);
+    console.log(mdString.parent); // this is the markdown itself.
 })()
