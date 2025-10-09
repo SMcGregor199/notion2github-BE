@@ -17,22 +17,35 @@ const n2m = new NotionToMarkdown({notionClient:notion, config:{parseChildPages:f
 
 
 
-//15d0721d80858038b838ea42a1a2eeec
+
+
+
 
 // ;(async ()=>{
-//     const pageRes = await notion.pages.retrieve({page_id: NOTION_PAGE_ID});
-//     console.log(pageRes.properties.title.title[0].plain_text);
-//     const blockRes = await notion.blocks.children.list({block_id: NOTION_PAGE_ID});
-//     console.log(blockRes.results[0].paragraph.rich_text[0].plain_text);
+//     const mdblocks= await n2m.pageToMarkdown(NOTION_PAGE_ID); //returns an array with all the page's blocks
+//     const mdString = n2m.toMarkdownString(mdblocks); // this returns an object that points to the markdown
+//     console.log(mdString.parent); // this is the markdown itself.
 // })()
 
-;(async ()=>{
-    const mdblocks= await n2m.pageToMarkdown(NOTION_PAGE_ID); //returns an array with all the page's blocks
-    const mdString = n2m.toMarkdownString(mdblocks); // this returns an object that points to the markdown
-    console.log(mdblocks);
-    console.log(mdString.parent); // this is the markdown itself.
-})()
+async function getPageMetadataById(pageId){
+    const pageRes = await notion.pages.retrieve({page_id: pageId});
+    var title = pageRes.properties.title.title[0].plain_text;
+    const currentYear = new Date().getFullYear();
+    const currentDay = new Date().toLocaleString('en-US',{day:'2-digit'});
+    const currentMonth = new Date().toLocaleString('en-US',{month:'2-digit'});
+    const currentDate = `${currentMonth}/${currentDay}/${currentYear}`;
+    console.log(currentDate);
+    console.log(title);
+    
+return `
+---
+title: "${title}"
+author: Shayne McGregor
+last updated: ${currentDate}
+--- 
 
-function mdMetadata(page_id){
-
+# **${title}** `;
 }
+
+
+getPageMetadataById(NOTION_PAGE_ID).then((metaData)=>{console.log(metaData)});
