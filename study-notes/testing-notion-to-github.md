@@ -1,11 +1,13 @@
 
 ---
 title: "Testing Notion to GitHub"
-author: Shayne McGregor
-last updated: 10/10/2025
+author: "Shayne McGregor"
+last updated: "10/10/2025"
+description: "Quick test of the Notion-to-GitHub sync workflow"
+tags: ["Notion","Markdown","GitHub"]
 --- 
 
-# **Testing Notion to GitHub** 
+# Testing Notion to GitHub 
 
 
 The connection works! This is just some paragraph text
