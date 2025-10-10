@@ -33,11 +33,7 @@ async function getPageMetadataById(pageId){
     
 return [`
 ---
-title: "${title}"
-author: "Shayne McGregor"
 last updated: "${currentDate}"
-description: "Quick test of the Notion-to-GitHub sync workflow"
-tags: ["Notion","Markdown","GitHub"]
 --- 
 
 # ${title} `,title] ;
