@@ -14,4 +14,4 @@ The connection works! This is just some paragraph text
 - [ ] Eat something 😊
 
 
-last updated: "10/10/2025"
+---<br>last updated: "10/10/2025"<br>---

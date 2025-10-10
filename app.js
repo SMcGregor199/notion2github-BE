@@ -30,7 +30,7 @@ async function getPageMetadataById(pageId){
     const currentDay = new Date().toLocaleString('en-US',{day:'2-digit'});
     const currentMonth = new Date().toLocaleString('en-US',{month:'2-digit'});
     const currentDate = `${currentMonth}/${currentDay}/${currentYear}`;
-    const currentDateMd = `last updated: "${currentDate}"`;
+    const currentDateMd = `---<br>last updated: "${currentDate}"<br>---`;
 return [`# ${title} `,title,currentDateMd] ;
 }
 
