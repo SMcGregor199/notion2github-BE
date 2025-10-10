@@ -19,6 +19,7 @@ const n2m = new NotionToMarkdown({notionClient:notion, config:{parseChildPages:f
 async function getPageContentById(pageId){
     const mdblocks= await n2m.pageToMarkdown(pageId);
     const mdString = n2m.toMarkdownString(mdblocks);
+
     return mdString.parent;
 }
 
@@ -44,8 +45,6 @@ function conCatMetadataAndContent(metadata, content) {
   return metadata[0].concat("\n\n", content);
 }
 
-// getPageMetadataById(NOTION_PAGE_ID).then((metaData)=>{console.log(metaData)});
-// getPageContentById(NOTION_PAGE_ID).then((content)=>{console.log(content)});
 
 async function createMdFile(pageId){
     const metadata = await getPageMetadataById(pageId);
@@ -56,3 +55,4 @@ async function createMdFile(pageId){
 
 }
 
+createMdFile(NOTION_PAGE_ID)
