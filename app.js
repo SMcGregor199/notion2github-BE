@@ -30,17 +30,15 @@ async function getPageMetadataById(pageId){
     const currentDay = new Date().toLocaleString('en-US',{day:'2-digit'});
     const currentMonth = new Date().toLocaleString('en-US',{month:'2-digit'});
     const currentDate = `${currentMonth}/${currentDay}/${currentYear}`;
-    
-return [`
----
-last updated: "${currentDate}"
---- 
-
-# ${title} `,title] ;
+    const currentDateMd = `last updated: "${currentDate}"`;
+return [`# ${title} `,title,currentDateMd] ;
 }
 
 function conCatMetadataAndContent(metadata, content) {
-  return metadata[0].concat("\n\n", content);
+    var documentBody = metadata[0].concat("\n\n", content);
+    var documentBodyWithMetadata = documentBody.concat("\n\n", metadata[2]);
+    return documentBodyWithMetadata;
+
 }
 
 
