@@ -14,7 +14,7 @@ const notion = new Client({
 })
 
 //passing the notion client to the option
-const n2m = new NotionToMarkdown({notionClient:notion, config:{parseChildPages:false}});
+const n2m = new NotionToMarkdown({notionClient:notion});
 
 async function getPageContentById(pageId){
     const mdblocks= await n2m.pageToMarkdown(pageId);
