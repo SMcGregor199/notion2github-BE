@@ -21,17 +21,28 @@ async function getChildPages(pageId){
         const response = await notion.blocks.children.list({block_id: pageId});
         
         
-        const pagesArray = response.results.filter((page)=>page.type ==='child_page').map((page)=>{
-            return {
-                id:page.id,
-                tag:"",
-                title:page.child_page.title,
-                summary:"",
-                link:"#",
-                thumbnail:""
-            };
-        });
+        const pagesArray = await Promise.all( 
+            
+            response.results.filter((page)=>page.type ==='child_page').map(async(page)=>{
+                let thePageId = page.id;
+                let title = await getPageTitleById(thePageId);
+               
 
+                let tag;
+                let summary;
+                let link;
+                let thumbnail;
+                let pageContent = await getPageContentById(thePageId);
+                tag = pageContent.results[pageContent.results.length-1].paragraph.rich_text[1].text.content;
+                summary = pageContent.results[0].heading_3.rich_text[0].plain_text;
+                link = "/"
+                thumbnail = "/blog-thumbnail.png"
+                
+            
+                
+            })
+        );
+       
         return pagesArray;
 
     } catch(err){
@@ -47,7 +58,7 @@ async function savePagesToFile(){
         const jsContent = `export default ${JSON.stringify(childPages,null,2)};\n`;
         await fs.writeFile("./data/notionBlogData.js", jsContent);
         console.log("✅ pages.js successfully written!");
-    } catch{
+    } catch(err){
         console.error("Error writing file:", err);
     }
 }
@@ -73,7 +84,7 @@ async function getPageTitleById(pageId){
 }
 
 //getPageContentById("28e0721d-8085-80fc-80f6-f4f80b9920f5").then((content)=>console.log(content.results[5].paragraph.rich_text)).catch((error)=>console.log(error));
-getPageContentById("28e0721d-8085-80fc-80f6-f4f80b9920f5").then((content)=>console.log(content.results)).catch((error)=>console.log(error));
-getPageTitleById("28e0721d-8085-80fc-80f6-f4f80b9920f5").then((title)=>console.log(title)).catch((error)=>console.log(error));
+// getPageContentById("28e0721d-8085-80fc-80f6-f4f80b9920f5").then((content)=>console.log(content.results)).catch((error)=>console.log(error));
+// getPageTitleById("28e0721d-8085-80fc-80f6-f4f80b9920f5").then((title)=>console.log(title)).catch((error)=>console.log(error));
 // getPageContentById(NOTION_PAGE_ID).then((content)=>console.log(content.results)).catch((error)=>console.log(error));
-// getChildPages(NOTION_PAGE_ID).then((content)=>console.log(content)).catch((error)=>console.log(error));
+getChildPages(NOTION_PAGE_ID).then((content)=>console.log(content)).catch((error)=>console.log(error));
