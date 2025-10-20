@@ -68,7 +68,7 @@ async function savePagesToFile(){
         console.error("Error writing file:", err);
     }
 }
-savePagesToFile();
+//savePagesToFile();
 async function getPageContentById(pageId){
     try{
         const childPage = await notion.blocks.children.list({block_id: pageId});
@@ -88,8 +88,10 @@ async function getPageTitleById(pageId){
         console.log("Error fetching page title:", err);
     }
 }
+async function getPageImageById(pageId){
+}
 
-//getPageContentById("28e0721d-8085-80fc-80f6-f4f80b9920f5").then((content)=>console.log(content.results[content.results.length-1].to_do.rich_text[1].text.content)).catch((error)=>console.log(error))
+//getPageContentById("28e0721d808580fb9638f4b2d629db55").then((content)=>console.log(content.results[5].image)).catch((error)=>console.log(error))
 // getPageContentById("28e0721d-8085-80fc-80f6-f4f80b9920f5").then((content)=>console.log(content.results)).catch((error)=>console.log(error));
 // getPageTitleById("28e0721d-8085-80fc-80f6-f4f80b9920f5").then((title)=>console.log(title)).catch((error)=>console.log(error));
 // getPageContentById(NOTION_PAGE_ID).then((content)=>console.log(content.results)).catch((error)=>console.log(error));
