@@ -2,6 +2,7 @@ import {config} from 'dotenv';
 config();
 import fs from "fs/promises";
 import {Client} from '@notionhq/client';
+import slugify from 'slugify';
 //import {NotionToMarkdown} from 'notion-to-md';
 const NOTION_PAGE_ID = process.env.NOTION_PAGE_ID;
 const NOTION_API_KEY = process.env.NOTION_API_KEY;
@@ -25,16 +26,15 @@ async function getChildPages(pageId){
             
             response.results.filter((page)=>page.type ==='child_page').map(async(page)=>{
                 let thePageId = page.id;
-                let title = await getPageTitleById(thePageId);
-                let tag;
-                let summary;
-                let link;
-                let thumbnail;
                 let pageContent = await getPageContentById(thePageId);
-                tag = pageContent.results[pageContent.results.length-1].to_do.rich_text[1].text.content;
-                summary = pageContent.results[0].heading_3.rich_text[0].plain_text;
-                link = "/"
-                thumbnail = "/blog-thumbnail.png"
+                let tag = pageContent.results[pageContent.results.length-1].to_do.rich_text[1].text.content;
+                let title = await getPageTitleById(thePageId);
+                let summary = pageContent.results[0].heading_3.rich_text[0].plain_text;
+                let link = slugify(title,{lower:true});
+                let thumbnail = await getPageImageById(thePageId);
+                let body = await getPageBodyContent(thePageId);
+                let publishedDate;
+                let updatedDate;
 
                 return {
                     id:thePageId,
@@ -43,7 +43,9 @@ async function getChildPages(pageId){
                     summary,
                     link,
                     thumbnail,
-                    content:{}
+                    body,
+                    publishedDate,
+                    updatedDate
                 }
                 
             })
@@ -68,7 +70,7 @@ async function savePagesToFile(){
         console.error("Error writing file:", err);
     }
 }
-//savePagesToFile();
+
 async function getPageContentById(pageId){
     try{
         const childPage = await notion.blocks.children.list({block_id: pageId});
@@ -89,10 +91,28 @@ async function getPageTitleById(pageId){
     }
 }
 async function getPageImageById(pageId){
+    try{
+        const pageContent = await getPageContentById(pageId);
+        const imageObject = pageContent.results.find((block)=>block.hasOwnProperty("image"));
+        return imageObject.image.file.url;
+    }
+    catch(err){
+        console.log("Error fetching page image:", err);
+    }
 }
 
-//getPageContentById("28e0721d808580fb9638f4b2d629db55").then((content)=>console.log(content.results[5].image)).catch((error)=>console.log(error))
-// getPageContentById("28e0721d-8085-80fc-80f6-f4f80b9920f5").then((content)=>console.log(content.results)).catch((error)=>console.log(error));
-// getPageTitleById("28e0721d-8085-80fc-80f6-f4f80b9920f5").then((title)=>console.log(title)).catch((error)=>console.log(error));
-// getPageContentById(NOTION_PAGE_ID).then((content)=>console.log(content.results)).catch((error)=>console.log(error));
-//getChildPages(NOTION_PAGE_ID).then((content)=>console.log(content)).catch((error)=>console.log(error));
+async function getPageBodyContent(pageId){
+    let pageContent = await getPageContentById(pageId);
+    const bodyContent = pageContent.results.slice(1, -1);
+    const grouped = bodyContent.reduce((acc,curr)=>{
+        if(curr.type === "heading_3"){
+            acc.push({heading:curr.heading_3.rich_text[0].plain_text,paras:[]});
+        } else if(curr.type === "paragraph"){
+            acc[acc.length-1].paras.push(curr.paragraph.rich_text[0].plain_text);
+        }
+        return acc;
+    },[]);
+    return grouped;
+}
+//getPageContentById("2950721d-8085-8050-a2f3-c9a78d8c0154").then((content)=>console.log(content.results)).catch((error)=>console.log(error));
+testingContentLoop("2950721d-8085-8050-a2f3-c9a78d8c0154");
