@@ -3,7 +3,6 @@ config();
 import fs from "fs/promises";
 import {Client} from '@notionhq/client';
 import slugify from 'slugify';
-//import {NotionToMarkdown} from 'notion-to-md';
 const NOTION_PAGE_ID = process.env.NOTION_PAGE_ID;
 const NOTION_API_KEY = process.env.NOTION_API_KEY;
 
@@ -14,8 +13,7 @@ const notion = new Client({
     auth: NOTION_API_KEY,
 })
 
-//passing the notion client to the option
-//const n2m = new NotionToMarkdown({notionClient:notion});
+
 
 async function getChildPages(pageId){
     try{
@@ -118,19 +116,7 @@ async function getPageMetadataById(pageId){
     return [page.created_time, page.last_edited_time ];
 
 }
-savePagesToFile(NOTION_PAGE_ID);
+//savePagesToFile(NOTION_PAGE_ID);
 
-// const title = await getPageTitleById("2990721d808580588854c85568a0d1a0");
-// console.log('The title is ' + title);
-// const response = await notion.blocks.children.list({block_id: "2990721d808580588854c85568a0d1a0"});
-// const tag = response.results[response.results.length-1].to_do.rich_text[1].text.content;
-// console.log('The tag is ' + tag);
-// const summary = response.results[0].heading_3.rich_text[0].plain_text;
-// console.log('The summary is ' + summary);
-// const link = slugify(title,{lower:true});
-// console.log('The link is ' + link);
-// //const image = await getPageImageById("2990721d808580588854c85568a0d1a0");
-// //console.log('The image is ' + image);
-// const body = await getPageBodyContent("2990721d808580588854c85568a0d1a0");
-// console.log('The body is ' + body);
+
 
