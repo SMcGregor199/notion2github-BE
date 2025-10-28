@@ -1,29 +1,123 @@
 export default [
   {
-    "id": "28e0721d-8085-80fc-80f6-f4f80b9920f5",
-    "tag": " Web Development",
-    "title": "The Beauty of Boring Code",
-    "summary": "Why I’ve started to appreciate clarity over cleverness in writing software.",
-    "link": "/",
-    "thumbnail": "/blog-thumbnail.png",
-    "content": {}
+    "id": "2990721d-8085-8058-8854-c85568a0d1a0",
+    "tag": "EdTech",
+    "title": "Why EdTech Is Right for Me",
+    "summary": "Bridging my Ph.D., university experience, and technical skill set in service of learning innovation",
+    "link": "why-edtech-is-right-for-me",
+    "thumbnail": "https://prod-files-secure.s3.us-west-2.amazonaws.com/21556b5d-e7e3-456a-bbe9-39fd5ea59d6a/8d872e23-abda-48d2-b852-7edc3a41286f/image.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=ASIAZI2LB4667SJTDQ4X%2F20251028%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20251028T162023Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEAgaCXVzLXdlc3QtMiJHMEUCIQDkoa07Ouoh9Z%2Fpha8i%2Fs03BpPMUawHbQq7Fl64iqKe3QIgYK0P1N4mPLNo7kcX57TNMwOgyRg9LP5JBjzlkKAgIW8qiAQIwf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARAAGgw2Mzc0MjMxODM4MDUiDFup91oDdWSmtb%2B99ircA3oTVH%2FXsl%2Bx%2Bg6qbys0AeazeIQKaS6UEASrUUv2QNX3X%2FdTd64mDRZTmXFg0ZNqYPwcBqDOXE0gCIcI7WWM5RWdS5z9ieS%2BmQ9brJukOjqjfSOzyDohiHJqU9XZyxpf9pLyClajpFNwc1aSV3pOFVltC5djDNQkG5O2p6FhZ8u6UwUFnZ4UX0l8qUhCWEaHJakVxLUELe86As%2FVHU7xZtUM2bUVvgzlHlrGbDJm%2BaiYKjlveop5zxZBdlo6eWLuWRPUl1M4XlLbAVwUsd6Knw7ZJ4hlpEpoaD1omhTGAUXyG6JSDxGiLFon4jbZ60rrhxxB%2B80TFX6RYWB1Eyr09k3lgW158ocmMZDsoR%2FUtLST6M%2BbvWMQqtcrsXFhJV8PU3xefr6cZ7vi6EDZ4TaLtEFJ2Wo3M%2FOjxVei%2FPDP%2B3HZ4vPPIwOcvw55v1GVLbEq4MGbXW0k6PGqoi2wFF03NkDQhLtq2rbixCXpemOlViBlVI0byP4f4lYMsUNyS0jgX9W67bXVcgjfjQlrwuF9XNbInVIXlOUue4ZGEZVLnQgrtRQaGWPlQDef8kQQWCBzUp%2FKhf3sOJiBFfdc3IxO3CRRcktI4jhavVivN5A4A6znfkSTfmcOj6ktrixQMOnOg8gGOqUBTSW2yTzF%2FBK3O%2FoQZJp4K3zP0E3YkWLsVwmZS0HLSzrU75NmqmE3lJ6yoXm4qeADdDNsW7MTIgB9XCf8PWnHbzJrcLGFn1FpNl4gMZGu7XgtwXT5W24YlbAMxg1DnxXoDRuU%2FJMxGdzIy%2FRH2614kVst%2F1Z4DDXFaKL3OkAT0Vvh6wxabPIEXZOzT9Npj7dFmJOpisfq3PxBdnThTz%2FkcWBiXiFq&X-Amz-Signature=4925adcdb5524c6993409f41be7f79af28d069692405accd0a44c33341047359&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+    "body": [
+      {
+        "heading": "Why EdTech Speaks My Language",
+        "paras": [
+          "Education has always been the center of my world—first as a student, then as a scholar, and now as someone who builds the digital infrastructure that supports learning every day. I’ve seen education from every angle: the seminar room, the administrative meeting, and the code editor. That 360° view is what makes EdTech feel like home to me. It’s where my academic roots, technical fluency, and passion for learning all intersect.",
+          "When I pursued my Ph.D., I learned how to think deeply about systems—about how knowledge is produced, shared, and sustained. Those lessons didn’t end when I left the library; they transformed when I stepped into the IT and marketing teams of a university. Supporting a higher education institution from the technical side has shown me how digital tools shape not just efficiency, but experience—how a line of code or an interface decision can change how students learn and faculty teach."
+        ]
+      },
+      {
+        "heading": "The Perfect Fit Between Research and Code",
+        "paras": [
+          "What excites me most about EdTech is that it doesn’t draw hard boundaries between theory and practice. It asks you to build with empathy, design with curiosity, and measure with integrity. My background in research helps me approach complex problems with analytical rigor, while my experience as a web developer keeps me grounded in implementation and iteration.",
+          "In many ways, I see code the same way I once saw academic writing: both are acts of communication. Both require clarity, structure, and a sense of audience. And in EdTech, both meet at the same goal—helping people learn more effectively."
+        ]
+      },
+      {
+        "heading": "Why I Belong Here",
+        "paras": [
+          "EdTech isn’t just an industry for me; it’s an ecosystem that matches my rhythm. I love building tools that make learning easier, fairer, and more human. I believe that technology, when done right, can amplify the best parts of education: discovery, creativity, and community.",
+          "It’s this belief—rooted in research, proven in practice, and powered by code—that drives me to keep learning, building, and contributing to the future of educational technology."
+        ]
+      }
+    ],
+    "publishedDate": "2025-10-27T18:15:00.000Z",
+    "updatedDate": "2025-10-28T16:20:00.000Z"
   },
   {
-    "id": "28e0721d-8085-80fb-9638-f4b2d629db55",
-    "tag": " Learning",
-    "title": "When the Tutorial Ends",
-    "summary": "How I’ve been learning to bridge the gap between guided learning and real-world building.",
-    "link": "/",
-    "thumbnail": "/blog-thumbnail.png",
-    "content": {}
+    "id": "2950721d-8085-8050-a2f3-c9a78d8c0154",
+    "tag": "Software Culture",
+    "title": "When Engineers Forget to Teach",
+    "summary": "The more fluent we become, the easier it is to forget what it felt like to stutter.",
+    "link": "when-engineers-forget-to-teach",
+    "thumbnail": "https://prod-files-secure.s3.us-west-2.amazonaws.com/21556b5d-e7e3-456a-bbe9-39fd5ea59d6a/8d4f4192-e572-4b74-9b78-297ad3f1b6e6/image.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=ASIAZI2LB466XBA7QCSL%2F20251028%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20251028T162023Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEAgaCXVzLXdlc3QtMiJHMEUCIQCAHgFBXMAQ%2FpRC%2B0bnFTXu6JnJnoatxtGPoX61mDrqVwIgfPbrYanjjMSw9yFiFCszQcsYHeLGBNAt2M8Nik8V0kUqiAQIwf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARAAGgw2Mzc0MjMxODM4MDUiDIAKNwDN8iDi6kxlfircA%2FBhB5YlomRdPlt1UCTt5QgdLammQIE2DiUiWhhOOlEMkrcTyZHHwMZg6VwO%2BEn7Ufcg9jgbT3dOIXpSUq%2FPr%2FUBOIJbPB7uEBFnKeavPVv2dibX0Lw0fWxW1%2FNQC5Z9dWx5JAuxaDm74eQUik63tdMooStjX9NkcEEOqMO622vhwF7Hc8%2BO4Y8TKJ7f3wmgnnjv7ql3QKrXx%2FSru7whMLUWhnKh5HvgG6wi4Gi6h3gc%2BiIcll6ceNSKc8G5kHDWxM3%2B2pEpSBSgjG%2FSzZ3Q81sG5uS8ICLKNPcD0cw7qPvm3ju0uX2%2Bi%2ByczDwIHYXiKtyNPIbnFMOjcOH1vKeL4ifH9KVvWkImnY%2BzTgr2YVftDdn%2FGaz730cZACDy4JxemuoSdsi05cZ0AF11HFMDwi%2B9PprOne2oDjiasrdark5Yi2xJVRA0lU1FCn8nlqbjJPy3VUeY1z1SeNHXc%2BzgADTVH7EJRSipZRPiNdLLT2Nd9rjz%2FR%2FGk%2FBQ%2B4J7gFGy6gAY%2F%2Fk24nVGSSrZiZi1%2B0QSvYvxXlLK6QsP1eEzMNOQien2H5VisSko15DCAuhJfMPDMoyOPdD6piNoU0aiO4eb24MVJUDMtV%2Bbr%2FD2h0zk4lIDpTKgpo6QHC%2BfMMrOg8gGOqUBNv5%2FOsDx1NW%2BivFqeFk7ZBNrpu3mtppVLk3E9kibg%2FTKnwvgi6r%2B4yC6AceAEOAzxvv55wp1zPjzg9kD5kW3I%2F%2B%2BhTAmizdDI%2FFlIzjuTgQmTvYbFe2Keek0lMqu0ZD5brpawVNb%2Bzgwkd%2BjQkfWRnGyliit57bwnUTaG37%2FO7f6TZGGAKh2NNG29tjw002fTxeFlzI1ufmD0%2FUPIc9ksjMD9%2FIK&X-Amz-Signature=1c0276caaf4ea8ddef365703889e14939e17bc6caf379e6e3c3fbaf5d291ba5e&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+    "body": [
+      {
+        "heading": "The Subtle Hierarchies of Expertise",
+        "paras": [
+          "There’s something I’ve noticed about some programmers who’ve been in the game for a while: a subtle way of talking that carries an air of superiority. It’s not always intentional. Sometimes it’s in a chuckle at someone’s “beginner” mistake, or in the way a senior dev describes a framework as if only a fool would use it. What’s odd is that every one of them was once a beginner too—someone who Googled everything, who didn’t yet know the syntax, who quietly hoped Stack Overflow would be kind."
+        ]
+      },
+      {
+        "heading": "The Expert Blind Spot",
+        "paras": [
+          "I think what we’re seeing is something psychologists call the expert blind spot—that strange amnesia that happens when you get so fluent in something that you forget what it was like not to be. In software, it’s everywhere. Code that once took days to understand now looks “obvious.” Bugs that once felt impossible now seem trivial. So when a newer developer asks a question, the expert’s empathy short-circuits. They don’t remember the uncertainty, only their current clarity."
+        ]
+      },
+      {
+        "heading": "The Myth of Meritocracy",
+        "paras": [
+          "But there’s also a cultural layer to it. Tech loves to believe in meritocracy—the idea that brilliance naturally rises to the top. It sounds noble, but it often leads to subtle hierarchies. If your worth is tied to being the smartest in the room, then you protect that image. You correct, you scoff, you signal mastery. And somewhere along the way, the joy of learning—and helping others learn—gets lost."
+        ]
+      },
+      {
+        "heading": "What True Seniority Looks Like",
+        "paras": [
+          "The irony, of course, is that the best engineers I’ve met aren’t like that at all. They’re grounded. They remember how fast the field moves, how fragile expertise really is. They know that humility and curiosity are what keep you employable—and human."
+        ]
+      },
+      {
+        "heading": "Remembering to Teach",
+        "paras": [
+          "Maybe the next phase of software maturity isn’t about cleaner abstractions or faster compilers. Maybe it’s about empathy. About remembering that good code is collaborative, and the most generous thing a senior engineer can do is teach like they still remember how it felt to ask."
+        ]
+      }
+    ],
+    "publishedDate": "2025-10-23T15:21:00.000Z",
+    "updatedDate": "2025-10-28T15:11:00.000Z"
   },
   {
-    "id": "28e0721d-8085-807c-91ba-c61147aca9ab",
-    "tag": " Accessibility",
-    "title": "Accessibility Is a Mindset, Not a Checklist",
-    "summary": "Why compliance isn’t the end goal of accessibility — it’s the starting point.",
-    "link": "/",
-    "thumbnail": "/blog-thumbnail.png",
-    "content": {}
+    "id": "29a0721d-8085-80c0-b4a1-e3f206608d5e",
+    "tag": "EdTech",
+    "title": "What Makes an EdTech Developer",
+    "summary": "The bridge between imagination, systems, and belief.",
+    "link": "what-makes-an-edtech-developer",
+    "thumbnail": "https://prod-files-secure.s3.us-west-2.amazonaws.com/21556b5d-e7e3-456a-bbe9-39fd5ea59d6a/320db2fc-35be-4daa-85f4-89cabb5231a3/image.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=ASIAZI2LB4666GY5N5JV%2F20251028%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20251028T162024Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEAgaCXVzLXdlc3QtMiJIMEYCIQDxW8TOXOQ0ViwA%2Bps4TqTs7a2e1ZWKsT5uLwk7gmfQ2wIhAJ1qtAzAE3Qyr8E71IDXNDTG6vI%2BHb5zcAI1KUvwI3hJKogECMH%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQABoMNjM3NDIzMTgzODA1Igz1YRtwMWfwZSKyEIgq3AMFFyNmUGiwsmORuIqsQndY3ASpiWVvNLn2wK%2F2t0vPzFW6vW2FTYg5sAzlFlXFNs1mtfHD1ZKlBlcizGxmhKkqDUOj2wtkvkXutfTqq7oFG7A7d2lXAQqvgv0VE8t%2FF0OGUofPvtRoNshxe%2Bi0cUrfduggBy3GCygLuYAcvPNGZ4EGpFYkn1jlF5t209qqvBr6IRN0HRBswx1P%2BZxakklgjf9v9qOEWzRz8eDGStul3fW%2B7n5y8VYzkn74Z7IvkOItxZsA46FNIB9uOkqZx0bMC%2ByUvsMm0hBnbvRLuWFUjaQNaMpqHpT83BuIVNQCtYdEwNfp3y5EZU1Tg6wuXI78xL8fUznN9t9Tk41sUk1r3t1PaVyhpO%2BRgLsEKyu3TQI68ICQjhV65bycIJ15Udqr9Bh6o%2BXOMmWf7gAKT1GJf%2FL1qh%2BCBjPeF6NA%2BvXYE315%2FdyTRXDBOhdhmD2CHsCVbChmyerPywC6hMtLeBYyccHJ%2FA8e2812jjedXFimyX5nYxD5B3NWWf7QIpPoqsQ3qVMeRrLMD0LMUp98N1N%2Blr1DOuI7lCT22r3E%2FUgHeNrmj9934Gqndgc588shLFoOrejtHr8%2BPUNR9DsfmfOK1O8uT3n4WWXq0X0JijDqzoPIBjqkAUHgVEaUsOLyEbGoJsFPrN3DuXbns3Q4OzzIiZybxS5EatIeDgSieOHY8%2BBoyCYU%2BBiKZ2B0YaYh7QbeeQGXYbYI3r7zimI%2FPNKPssFq%2FiYSXo7vVvRMxcV%2BAnMFz989JMuP4vLF59zM%2F36%2BjVcpoM%2BGDqTqTTE2atPmwrhYCGsPUj8MEbs1fJSrLrKYFTLtKvunyrltouJssx7KbJB14KuZIXuc&X-Amz-Signature=99d0c0b564c55b7b62b66f1fc65180f464bf88609c4362e2fd6009b91f4b11fb&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+    "body": [
+      {
+        "heading": "The Paradox of Academia",
+        "paras": [
+          "A part of me actually wants to be done with higher education. Why, you might ask? Well, it has to do with the fact that my most recent experience with people in higher ed… was very much lacking. I won’t name any names, but anyone who’s been in my shoes—as a graduate student first, and then a post-graduate trying to find meaningful work in academia—will probably know what I mean.",
+          "Or at least, a certain kind of person will.",
+          "Here’s the thing: one of the great ironies of the academy is that, for all its talk about the “life of the mind,” it can actually be one of the least imaginative spaces out there. There’s a comfort in tradition, in hierarchy, in credentialing that ends up shrinking the very curiosity it claims to cultivate. It’s not always malicious—sometimes it’s just structural, sometimes it’s economic—but it’s real. And I forget how sheltered that world can be until I find myself too close to it again."
+        ]
+      },
+      {
+        "heading": "Seeing Education From Both Sides",
+        "paras": [
+          "But that’s also why I believe I’m best suited for this arena. I’ve experienced both the highs and the lows of higher education—the rigor, the mentorship, the intellectual thrill—but also the bureaucracy, the stagnation, the burnout.",
+          "I’ve seen what makes traditional education valuable, and I’ve lived through its pitfalls. But I also know what a non-traditional education looks like: what it means to learn through Udemy and YouTube; to pay for mentorship or coaching instead of tuition; to leverage AI tools and open-source communities to grow faster than any syllabus could allow.",
+          "That blend of perspectives—academic and autodidactic—isn’t just my background. It’s my worldview."
+        ]
+      },
+      {
+        "heading": "The Role of Imagination",
+        "paras": [
+          "If there’s one thing higher ed needs, it’s imagination. And that’s exactly what I bring.",
+          "EdTech, at its core, isn’t just about digitizing classrooms or making dashboards prettier. It’s about reimagining the systems that create learners. It’s about asking hard questions: What if the structure of learning could evolve as quickly as the tools we use to facilitate it? What if data pipelines and accessibility features weren’t just technical specs but ethical commitments?",
+          "The educational system we rely on to produce lifelong learners is, in many ways, broken. But it doesn’t have to stay that way."
+        ]
+      },
+      {
+        "heading": "The Developer Who Believes",
+        "paras": [
+          "EdTech doesn’t just need developers who can code—it needs developers who believe.",
+          "People who understand ETL pipelines, database management, accessibility compliance, and concurrency issues—but who also see beyond them. As abstraction and automation continue to reshape how we build, what will matter most is imagination. The belief that better systems are possible.",
+          "That’s what drives me. That’s what defines an EdTech developer.",
+          "Someone who understands both the syntax and the soul of education. Someone who believes in the mission of learning itself.",
+          "And I can’t wait to find the next opportunity where I can make that belief tangible—line by line, feature by feature, system by system."
+        ]
+      }
+    ],
+    "publishedDate": "2025-10-28T15:18:00.000Z",
+    "updatedDate": "2025-10-28T15:59:00.000Z"
   }
 ];

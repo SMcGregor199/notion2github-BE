@@ -33,9 +33,7 @@ async function getChildPages(pageId){
                 let link = slugify(title,{lower:true});
                 let thumbnail = await getPageImageById(thePageId);
                 let body = await getPageBodyContent(thePageId);
-                let publishedDate;
-                let updatedDate;
-
+                let [publishedDate, updatedDate]= await getPageMetadataById(thePageId);
                 return {
                     id:thePageId,
                     tag,
@@ -59,13 +57,13 @@ async function getChildPages(pageId){
     
 
 }
-async function savePagesToFile(){
+async function savePagesToFile(id){
     try{
-        const parentPageId = NOTION_PAGE_ID;
+        const parentPageId = id;
         const childPagesContent = await getChildPages(parentPageId);
         const jsContent = `export default ${JSON.stringify(childPagesContent,null,2)};\n`;
         await fs.writeFile("./data/notionBlogData.js", jsContent);
-        console.log("✅ pages.js successfully written!");
+        console.log("✅ notionBlogData.js successfully written!");
     } catch(err){
         console.error("Error writing file:", err);
     }
@@ -114,5 +112,25 @@ async function getPageBodyContent(pageId){
     },[]);
     return grouped;
 }
-//getPageContentById("2950721d-8085-8050-a2f3-c9a78d8c0154").then((content)=>console.log(content.results)).catch((error)=>console.log(error));
-testingContentLoop("2950721d-8085-8050-a2f3-c9a78d8c0154");
+
+async function getPageMetadataById(pageId){
+    const page = await notion.pages.retrieve({page_id: pageId});
+    return [page.created_time, page.last_edited_time ];
+
+}
+savePagesToFile(NOTION_PAGE_ID);
+
+// const title = await getPageTitleById("2990721d808580588854c85568a0d1a0");
+// console.log('The title is ' + title);
+// const response = await notion.blocks.children.list({block_id: "2990721d808580588854c85568a0d1a0"});
+// const tag = response.results[response.results.length-1].to_do.rich_text[1].text.content;
+// console.log('The tag is ' + tag);
+// const summary = response.results[0].heading_3.rich_text[0].plain_text;
+// console.log('The summary is ' + summary);
+// const link = slugify(title,{lower:true});
+// console.log('The link is ' + link);
+// //const image = await getPageImageById("2990721d808580588854c85568a0d1a0");
+// //console.log('The image is ' + image);
+// const body = await getPageBodyContent("2990721d808580588854c85568a0d1a0");
+// console.log('The body is ' + body);
+
