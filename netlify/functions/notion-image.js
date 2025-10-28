@@ -1,16 +1,21 @@
 import { getStore } from "@netlify/blobs";
+import { Client } from "@notionhq/client";
+import {config} from "dotenv";
+config();
+const NOTION_API_KEY = process.env.NOTION_API_KEY;
+
+
+
+//initilizing the Notion client
+const notion = new Client({
+    auth: NOTION_API_KEY,
+})
 
 export async function handler(event) {
-  const store = getStore({ name: "demo-store" });
-
-  // Write
-  await store.set("message", "Hello Netlify Blobs!");
-
-  // Read
-  const msg = await store.get("message");
-
-  return {
-    statusCode: 200,
-    body: `Stored message: ${msg}`,
-  };
+    try{
+        const blockId = event.queryStringParameters.blockId;
+    }catch(err){
+        console.log(err)
+    }
+ 
 }
