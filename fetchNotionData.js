@@ -59,7 +59,7 @@ async function savePagesToFile(id){
     try{
         const parentPageId = id;
         const childPagesContent = await getChildPages(parentPageId);
-        const jsContent = `export default ${JSON.stringify(childPagesContent,null,2)};\n`;
+        const jsContent = `export const blogPostsData = ${JSON.stringify(childPagesContent,null,2)};\n`;
         await fs.writeFile("./data/notionBlogData.js", jsContent);
         console.log("✅ notionBlogData.js successfully written!");
     } catch(err){
@@ -117,6 +117,6 @@ async function getPageMetadataById(pageId){
     return [page.created_time, page.last_edited_time ];
 
 }
-//savePagesToFile(NOTION_PAGE_ID);
+savePagesToFile(NOTION_PAGE_ID);
 
 
