@@ -90,6 +90,7 @@ async function getPageImageById(pageId){
     try{
         const pageContent = await getPageContentById(pageId);
         const imageObject = pageContent.results.find((block)=>block.hasOwnProperty("image"));
+        
         return `${process.env.BACKEND_ORIGIN}/.netlify/functions/notion-image?blockId=${imageObject.id}`;
     }
     catch(err){
@@ -119,5 +120,3 @@ async function getPageMetadataById(pageId){
 //savePagesToFile(NOTION_PAGE_ID);
 
 
-const raw = await getPageImageById("2950721d80858050a2f3c9a78d8c0154")
-console.log(raw);
