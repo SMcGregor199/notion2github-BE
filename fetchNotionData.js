@@ -24,6 +24,7 @@ async function getChildPages(pageId){
             
             response.results.filter((page)=>page.type ==='child_page').map(async(page)=>{
                 let thePageId = page.id;
+                //console.log(page);
                 let pageContent = await getPageContentById(thePageId);
                 let tag = pageContent.results[pageContent.results.length-1].to_do.rich_text[1].text.content;
                 let title = await getPageTitleById(thePageId);
@@ -86,17 +87,7 @@ async function getPageTitleById(pageId){
         console.log("Error fetching page title:", err);
     }
 }
-async function getPageImageById(pageId){
-    try{
-        const pageContent = await getPageContentById(pageId);
-        const imageObject = pageContent.results.find((block)=>block.hasOwnProperty("image"));
-        
-        return `${process.env.BACKEND_ORIGIN}/.netlify/functions/notion-image?blockId=${imageObject.id}`;
-    }
-    catch(err){
-        console.log("Error fetching page image:", err);
-    }
-}
+
 
 async function getPageBodyContent(pageId){
     let pageContent = await getPageContentById(pageId);
@@ -118,5 +109,4 @@ async function getPageMetadataById(pageId){
 
 }
 savePagesToFile(NOTION_PAGE_ID);
-
 

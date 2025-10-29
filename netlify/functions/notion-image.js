@@ -41,6 +41,7 @@ const notion = new Client({
 export async function handler(event) {
     try{
         const blockId = event.queryStringParameters.blockId;
+    
         if (!blockId) return { statusCode: 400, body: "Missing blockId" };
         // If we have the raw binary image data cached, return it
         const cached = await store.get(blockId, { type: "arrayBuffer" });
