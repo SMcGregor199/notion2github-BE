@@ -29,7 +29,7 @@ async function getChildPages(pageId){
                 let title = await getPageTitleById(thePageId);
                 let summary = pageContent.results[0].heading_3.rich_text[0].plain_text;
                 let link = slugify(title,{lower:true});
-                let thumbnail = await getPageImageById(thePageId);
+                let thumbnail = `${process.env.BACKEND_ORIGIN}/.netlify/functions/notion-image?blockId=${thePageId}`;
                 let body = await getPageBodyContent(thePageId);
                 let [publishedDate, updatedDate]= await getPageMetadataById(thePageId);
                 return {

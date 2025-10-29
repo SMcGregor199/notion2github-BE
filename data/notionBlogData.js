@@ -5,7 +5,7 @@ export const blogPostsData = [
     "title": "Why EdTech Is Right for Me",
     "summary": "Bridging my Ph.D., university experience, and technical skill set in service of learning innovation",
     "link": "why-edtech-is-right-for-me",
-    "thumbnail": "https://shaynemcgregordev-be.netlify.app/.netlify/functions/notion-image?blockId=2990721d-8085-80b1-91d3-d346e536a9df",
+    "thumbnail": "https://shaynemcgregordev-be.netlify.app/.netlify/functions/notion-image?blockId=2990721d-8085-8058-8854-c85568a0d1a0",
     "body": [
       {
         "heading": "Why EdTech Speaks My Language",
@@ -38,7 +38,7 @@ export const blogPostsData = [
     "title": "When Engineers Forget to Teach",
     "summary": "The more fluent we become, the easier it is to forget what it felt like to stutter.",
     "link": "when-engineers-forget-to-teach",
-    "thumbnail": "https://shaynemcgregordev-be.netlify.app/.netlify/functions/notion-image?blockId=2990721d-8085-801b-bf92-c4719204cdba",
+    "thumbnail": "https://shaynemcgregordev-be.netlify.app/.netlify/functions/notion-image?blockId=2950721d-8085-8050-a2f3-c9a78d8c0154",
     "body": [
       {
         "heading": "The Subtle Hierarchies of Expertise",
@@ -80,7 +80,7 @@ export const blogPostsData = [
     "title": "What Makes an EdTech Developer",
     "summary": "The bridge between imagination, systems, and belief.",
     "link": "what-makes-an-edtech-developer",
-    "thumbnail": "https://shaynemcgregordev-be.netlify.app/.netlify/functions/notion-image?blockId=29a0721d-8085-8087-a85f-e74794da6d85",
+    "thumbnail": "https://shaynemcgregordev-be.netlify.app/.netlify/functions/notion-image?blockId=29a0721d-8085-80c0-b4a1-e3f206608d5e",
     "body": [
       {
         "heading": "The Paradox of Academia",

@@ -3,11 +3,34 @@ import { Client } from "@notionhq/client";
 import {config} from "dotenv";
 config();
 const NOTION_API_KEY = process.env.NOTION_API_KEY;
+async function getPageContentById(pageId){
+    try{
+        const childPage = await notion.blocks.children.list({block_id: pageId});
+        return childPage;
+    }
+    catch(err){
+        console.error("Error fetching page content:", err);
+    }
+
+}
+
+async function getPageImageUrlById(pageId){
+    try{
+        const pageContent = await getPageContentById(pageId);
+        const imageObject = pageContent.results.find((block)=>block.hasOwnProperty("image"));
+        
+        return imageObject.image.file.url;
+    }
+    catch(err){
+        console.log("Error fetching page image:", err);
+    }
+}
 
 
-
-
-const store  = getStore({ name: "images" });
+const store  = getStore({ name: "images",
+    siteID: process.env.NETLIFY_SITE_ID,
+    token: process.env.NETLIFY_ACCESS_TOKEN
+});
 
 
 //initilizing the Notion client
@@ -36,9 +59,7 @@ export async function handler(event) {
         }
 
         // If we don't have the image cached, fetch it from Notion and cache it
-        const pageContent = await getPageContentById(blockId);
-        const imageObject = pageContent.results.find((block)=>block.hasOwnProperty("image"));
-        const imageFileUrl = imageObject.image.file.url;
+        const imageFileUrl = await getPageImageUrlById(blockId);
         const res = await fetch(imageFileUrl);
         const contentType = res.headers.get("content-type")
     
@@ -57,7 +78,11 @@ export async function handler(event) {
             };
     
     }catch(err){
-        console.log(err)
+        console.log(err);
+            return {
+      statusCode: 500,
+      body: `Internal error: ${err.message || err}`,
+    };
     }
  
 }
