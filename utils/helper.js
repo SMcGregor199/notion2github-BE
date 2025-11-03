@@ -92,7 +92,7 @@ async function savePagesToFile(id){
         const parentPageId = id;
         const childPagesContent = await getChildPages(parentPageId);
         const jsContent = `export const blogPostsData = ${JSON.stringify(childPagesContent,null,2)};\n`;
-        await fs.writeFile("./data/notionBlogData.js", jsContent);
+        await fs.writeFile("../data/notionBlogData.js", jsContent);
         console.log("✅ notionBlogData.js successfully written!");
         return childPagesContent;
         
