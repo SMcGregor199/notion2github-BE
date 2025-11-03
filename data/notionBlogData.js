@@ -30,7 +30,7 @@ export const blogPostsData = [
       }
     ],
     "publishedDate": "2025-10-27T18:15:00.000Z",
-    "updatedDate": "2025-10-28T16:20:00.000Z"
+    "updatedDate": "2025-11-03T16:47:00.000Z"
   },
   {
     "id": "2950721d-8085-8050-a2f3-c9a78d8c0154",

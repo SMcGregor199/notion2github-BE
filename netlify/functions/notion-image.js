@@ -80,10 +80,10 @@ export async function handler(event) {
     
     }catch(err){
         console.log(err);
-            return {
-      statusCode: 500,
-      body: `Internal error: ${err.message || err}`,
-    };
+        return {
+        statusCode: 500,
+        body: `Internal error: ${err.message || err}`,
+        };
     }
  
 }

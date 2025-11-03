@@ -1,11 +1,13 @@
 import {config} from 'dotenv';
 config();
+import {getStore} from "@netlify/blobs";
 import fs from "fs/promises";
 import {Client} from '@notionhq/client';
 import slugify from 'slugify';
 const NOTION_PAGE_ID = process.env.NOTION_PAGE_ID;
 const NOTION_API_KEY = process.env.NOTION_API_KEY;
-
+const BLOB_STORE = process.env.BLOB_STORE;
+const BLOB_KEY = process.env.BLOB_KEY;
 
 
 //initilizing the Notion client
@@ -15,47 +17,7 @@ const notion = new Client({
 
 
 
-async function getChildPages(pageId){
-    try{
-        const response = await notion.blocks.children.list({block_id: pageId});
-        
-        
-        const pagesArray = await Promise.all( 
-            
-            response.results.filter((page)=>page.type ==='child_page').map(async(page)=>{
-                let thePageId = page.id;
-                //console.log(page);
-                let pageContent = await getPageContentById(thePageId);
-                let tag = pageContent.results[pageContent.results.length-1].to_do.rich_text[1].text.content;
-                let title = await getPageTitleById(thePageId);
-                let summary = pageContent.results[0].heading_3.rich_text[0].plain_text;
-                let link = slugify(title,{lower:true});
-                let thumbnail = `${process.env.BACKEND_ORIGIN}/.netlify/functions/notion-image?blockId=${thePageId}`;
-                let body = await getPageBodyContent(thePageId);
-                let [publishedDate, updatedDate]= await getPageMetadataById(thePageId);
-                return {
-                    id:thePageId,
-                    tag,
-                    title,
-                    summary,
-                    link,
-                    thumbnail,
-                    body,
-                    publishedDate,
-                    updatedDate
-                }
-                
-            })
-        );
-       
-        return pagesArray;
 
-    } catch(err){
-        console.error("Error fetching child pages:", err);
-    }
-    
-
-}
 async function savePagesToFile(id){
     try{
         const parentPageId = id;
@@ -63,6 +25,7 @@ async function savePagesToFile(id){
         const jsContent = `export const blogPostsData = ${JSON.stringify(childPagesContent,null,2)};\n`;
         await fs.writeFile("./data/notionBlogData.js", jsContent);
         console.log("✅ notionBlogData.js successfully written!");
+        return jsContent;
     } catch(err){
         console.error("Error writing file:", err);
     }
@@ -106,6 +69,24 @@ async function getPageBodyContent(pageId){
 async function getPageMetadataById(pageId){
     const page = await notion.pages.retrieve({page_id: pageId});
     return [page.created_time, page.last_edited_time ];
+
+}
+async function savePagesToBlob(pageId){
+    try{
+        const parentPageId = pageId;
+        const childPagesContent = await getChildPages(parentPageId);
+        const jsContent = `export const blogPostsData = ${JSON.stringify(childPagesContent,null,2)};\n`;
+        await store.set(BLOB_KEY, jsContent);
+        // const store = blobs.getStore(blobStore);
+        // await store.set(BLOB_KEY, jsContent, {
+        //     contentType: 'application/json; charset=utf-8',
+        // });
+        // await fs.writeFile("./data/notionBlogData.js", jsContent);
+        console.log("✅ notionBlogData.js successfully written to Netlify blob!");
+    }
+    catch(err){
+        console.error("Error saving page to blob:", err);
+    }
 
 }
 savePagesToFile(NOTION_PAGE_ID);
