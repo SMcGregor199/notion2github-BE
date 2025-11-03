@@ -12,7 +12,7 @@ export default async (request, context) => {
         
        return Response.json(blogPostsData, {
             headers: { 
-                "Cache-Control": "no-store", "Access-Control-Allow-Origin": allow,
+                "Cache-Control": "no-store", "Access-Control-Allow-Origin": "*",
                 "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
                 "Access-Control-Allow-Headers": "Content-Type, Authorization",
                 "Vary": "Origin", 
@@ -25,7 +25,7 @@ export default async (request, context) => {
         console.error("Error fetching blog data:", err);
         return Response.json({ ok: false, error: err.message }, {
             headers: { 
-                "Cache-Control": "no-store", "Access-Control-Allow-Origin": allow,
+                "Cache-Control": "no-store", "Access-Control-Allow-Origin": "*",
                 "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
                 "Access-Control-Allow-Headers": "Content-Type, Authorization",
                 "Vary": "Origin", 
