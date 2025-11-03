@@ -94,7 +94,7 @@ async function savePagesToFile(id){
         const jsContent = `export const blogPostsData = ${JSON.stringify(childPagesContent,null,2)};\n`;
         await fs.writeFile("./data/notionBlogData.js", jsContent);
         console.log("✅ notionBlogData.js successfully written!");
-        return `${JSON.stringify(childPagesContent,null,2)}`;
+        return childPagesContent;
     } catch(err){
         console.error("Error writing file:", err);
     }
