@@ -95,6 +95,7 @@ async function savePagesToFile(id){
         await fs.writeFile("./data/notionBlogData.js", jsContent);
         console.log("✅ notionBlogData.js successfully written!");
         return childPagesContent;
+        
     } catch(err){
         console.error("Error writing file:", err);
     }

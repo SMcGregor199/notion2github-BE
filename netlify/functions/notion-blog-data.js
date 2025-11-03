@@ -8,9 +8,8 @@ const NOTION_PAGE_ID = process.env.NOTION_PAGE_ID;
 
 export default async (request, context) => {
     try{
-        const blogPostsData = await savePagesToFile(NOTION_PAGE_ID);
-        console.log(blogPostsData);
-       return Response.json(blogPostsData, {
+        const blogData =  await savePagesToFile(NOTION_PAGE_ID)
+        return Response.json(blogData, {
             headers: { 
                 "Cache-Control": "no-store", "Access-Control-Allow-Origin": "*",
                 "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -18,7 +17,6 @@ export default async (request, context) => {
                 "Vary": "Origin", 
             }
         });
- 
 
     }
     catch(err){
