@@ -11,7 +11,7 @@ export default async (request, context) => {
         const blogPostsData = await savePagesToFile(NOTION_PAGE_ID);
         
        return Response.json(blogPostsData, {
-            headers: { "Cache-Control": "no-store" }
+            headers: { "Cache-Control": "no-store","Access-Control-Allow-Origin": "*" }
         });
 
 
