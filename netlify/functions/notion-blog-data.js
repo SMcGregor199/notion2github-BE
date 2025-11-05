@@ -21,7 +21,7 @@ export default async(request, context) => {
         }
         const store = getStore({ name: "content", siteID: process.env.NETLIFY_SITE_ID, token: process.env.NETLIFY_ACCESS_TOKEN });
         const manifest = await store.get("content/manifest.json", {type:"json"});
-        if (!manifest) return { statusCode: 404, body: "manifest not found" };
+        if (!manifest) return { statusCode: 404, headers:{"Access-Control-Allow-Origin": "https://shaynemcgregor.dev"}, body: "manifest not found" };
         
         const version = await fetchAndStoreLatestData();
         const ifNoneMatch = request.headers.get("if-none-match");
