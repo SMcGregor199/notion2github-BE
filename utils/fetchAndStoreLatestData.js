@@ -1,7 +1,7 @@
 import { getStore } from "@netlify/blobs";
 import {config} from "dotenv";
 config();
-import {savePagesToFile} from "../../utils/helper";
+import {savePagesToFile} from "./helper";
 const NOTION_PAGE_ID = process.env.NOTION_PAGE_ID;
 import Crypto from "crypto";
 
