@@ -23,6 +23,7 @@ export default async(request, context) => {
                 status: 304,
                 headers: {
                     "Access-Control-Allow-Origin": "https://shaynemcgregor.dev",
+                    "Access-Control-Expose-Headers": "ETag",
                     ETag: version,
                 },
             });
@@ -34,6 +35,7 @@ export default async(request, context) => {
                 "Access-Control-Allow-Origin": "https://shaynemcgregor.dev",
                 "Content-Type": "application/json",
                 "Cache-Control": "max-age=30, stale-while-revalidate=300",
+                "Access-Control-Expose-Headers": "ETag",
                 ETag: version,
             },
         });
