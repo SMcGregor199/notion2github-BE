@@ -24,7 +24,7 @@ export default async(request, context) => {
         if (!manifest) return { statusCode: 404, headers:{"Access-Control-Allow-Origin": "https://shaynemcgregor.dev"}, body: "manifest not found" };
         
         const version = await fetchAndStoreLatestData();
-        const ifNoneMatch = request.headers.get("if-none-match");
+        const ifNoneMatch = request.headers.get("If-None-Match");
         if (ifNoneMatch && ifNoneMatch === version) {
             return {
             statusCode: 304,
