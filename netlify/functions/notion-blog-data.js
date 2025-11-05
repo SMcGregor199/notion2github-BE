@@ -1,28 +1,62 @@
 import { getStore } from "@netlify/blobs";
 import {config} from "dotenv";
-import Crypto from "crypto";
 config();
-import {savePagesToFile} from "../../utils/helper";
-const NOTION_PAGE_ID = process.env.NOTION_PAGE_ID;
+import fetchAndStoreLatestData from "../../utils/fetchAndStoreLatestData";
 
 
 
-export default async (request, context) => {
+export default async(request, context) => {
+
     try{
-        const blogData =  await savePagesToFile(NOTION_PAGE_ID)
-        const stringifiedData = JSON.stringify(blogData);
-        const hashKey = Crypto.createHash("sha256").update(stringifiedData).digest("hex");
-        const blogDataStore = getStore({ name: "content", siteID: process.env.NETLIFY_SITE_ID, token: process.env.NETLIFY_ACCESS_TOKEN });
-        const isFound = await blogDataStore.get(hashKey); 
-        if(isFound){
-            return;
-        } else {
-            await blogDataStore.set(hashKey, stringifiedData);
-            await blogDataStore.setJSON("content/manifest.json",{current_key:hashKey,lastUpdated:new Date().toISOString()});
+
+        if (request.method === "OPTIONS") {
+            return {
+                statusCode: 204,
+                headers: {
+                    "Access-Control-Allow-Origin": "https://shaynemcgregor.dev",
+                    "Access-Control-Allow-Methods": "GET, OPTIONS",
+                    "Access-Control-Allow-Headers": "If-None-Match",
+                },
+            };
         }
+        const store = getStore({ name: "content", siteID: process.env.NETLIFY_SITE_ID, token: process.env.NETLIFY_ACCESS_TOKEN });
+        const manifest = await store.get("content/manifest.json", {type:"json"});
+        if (!manifest) return { statusCode: 404, body: "manifest not found" };
+        
+        const version = await fetchAndStoreLatestData();
+        const ifNoneMatch = request.headers.get("if-none-match");
+        if (ifNoneMatch && ifNoneMatch === version) {
+            return {
+            statusCode: 304,
+            headers: {
+                "Access-Control-Allow-Origin": "https://shaynemcgregor.dev",
+                ETag: version,
+            },
+            };
+        }
+        const body = await store.get(version,{type:"json"});
+        return {
+            statusCode: 200,
+            headers: {
+                "Access-Control-Allow-Origin": "https://shaynemcgregor.dev",
+                "Content-Type": "application/json",
+                "Cache-Control": "max-age=30, stale-while-revalidate=300",
+                ETag: version,
+            },
+            body,
+        }
+
+      
 
     }
     catch(err){
         console.error("Error fetching blog data:", err);
+        return {
+            statusCode: 500,
+            headers: {
+                "Access-Control-Allow-Origin": "https://shaynemcgregor.dev",
+            },
+            body: `Internal error: ${err.message || err}`,
+        };
     }
 }
