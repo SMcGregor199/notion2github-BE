@@ -10,11 +10,11 @@ export default async(request, context) => {
     try{
 
         if (request.method === "OPTIONS") {
-            return new Response(null,{status:204,headers:{"Access-Control-Allow-Origin": "https://shaynemcgregor.dev","Access-Control-Allow-Methods": "GET, OPTIONS","Access-Control-Allow-Headers": request.headers.get("access-control-request-headers")}})
+            return new Response(null,{status:204,headers:{"Access-Control-Allow-Origin": "*","Access-Control-Allow-Methods": "GET, OPTIONS","Access-Control-Allow-Headers": request.headers.get("access-control-request-headers")}})
         }
         const store = getStore({ name: "content", siteID: process.env.NETLIFY_SITE_ID, token: process.env.NETLIFY_ACCESS_TOKEN });
         const manifest = await store.get("content/manifest.json", {type:"json"});
-        if (!manifest) return new Response("manifest not found",{status:404,headers:{"Access-Control-Allow-Origin": "https://shaynemcgregor.dev"}});
+        if (!manifest) return new Response("manifest not found",{status:404,headers:{"Access-Control-Allow-Origin": "*"}});
         
         const version = await fetchAndStoreLatestData();
         const ifNoneMatch = request.headers.get("if-none-match");
@@ -22,7 +22,7 @@ export default async(request, context) => {
             return new Response(null,{
                 status: 304,
                 headers: {
-                    "Access-Control-Allow-Origin": "https://shaynemcgregor.dev",
+                    "Access-Control-Allow-Origin": "*",
                     "Access-Control-Expose-Headers": "ETag",
                     ETag: version,
                 },
@@ -32,7 +32,7 @@ export default async(request, context) => {
         return new Response(JSON.stringify(body),{
             status: 200,
             headers: {
-                "Access-Control-Allow-Origin": "https://shaynemcgregor.dev",
+                "Access-Control-Allow-Origin": "*",
                 "Content-Type": "application/json",
                 "Cache-Control": "max-age=30, stale-while-revalidate=300",
                 "Access-Control-Expose-Headers": "ETag",
@@ -48,7 +48,7 @@ export default async(request, context) => {
         return new Response(`Internal error: ${err.message || err}`,{
             status: 500,
             headers: {
-                "Access-Control-Allow-Origin": "https://shaynemcgregor.dev",
+                "Access-Control-Allow-Origin": "*",
                 "Content-Type": "text/plain"
             },
         });
