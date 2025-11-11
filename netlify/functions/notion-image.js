@@ -2,6 +2,7 @@ import { getStore } from "@netlify/blobs";
 import { Client } from "@notionhq/client";
 import {config} from "dotenv";
 config();
+import sharp from "sharp";
 const NOTION_API_KEY = process.env.NOTION_API_KEY;
 async function getPageContentById(pageId){
     try{
@@ -38,52 +39,62 @@ const notion = new Client({
     auth: NOTION_API_KEY,
 })
 
-export async function handler(event) {
+export default async (request,context)=> {
     try{
-        const blockId = event.queryStringParameters.blockId;
+        const url = new URL(request.url);
+        const blockId = url.searchParams.get("blockId");
     
-        if (!blockId) return { statusCode: 400, body: "Missing blockId" };
+        if (!blockId) return new Response("Missing blockId", {status:400}); 
         // If we have the raw binary image data cached, return it
         const cached = await store.get(blockId, { type: "arrayBuffer" });
         const meta   = await store.getMetadata(blockId);
         if (cached) {
-            return {
-                statusCode: 200,
+            return new Response(cached, {
+                status: 200,
                 headers: {
-                "Content-Type": meta?.contentType,
+                "Content-Type": meta?.contentType || "image/webp",
                 "Cache-Control": "public, max-age=31536000, immutable",
                 "Access-Control-Allow-Origin": "*"
-                },
-                body: Buffer.from(cached).toString("base64"),
-                isBase64Encoded: true
-            };
+                }
+            });
         }
 
         // If we don't have the image cached, fetch it from Notion and cache it
         const imageFileUrl = await getPageImageUrlById(blockId);
         const res = await fetch(imageFileUrl);
-        const contentType = res.headers.get("content-type")
-    
+
+        if (!res.ok) {
+            return new Response(`Failed to fetch source image: ${res.status}`, {status: 502, headers: {"Content-Type": "text/plain", "Access-Control-Allow-Origin": "*" }});
+        }
+        
+        //getting the raw data from the response (binary data)
         const arrayBuf = await res.arrayBuffer();
+
+        //turning it into a Node Buffer(something we can actually use and perform operations on)
         const buf = Buffer.from(arrayBuf);
-        await store.set(blockId, buf, { metadata: { contentType } });
-            return {
-                statusCode: 200,
+
+        const optimizedBuf = await sharp(buf)
+        .toFormat("webp", { quality: 80 })
+        .toBuffer();
+
+        await store.set(blockId, optimizedBuf, { metadata: { contentType: "image/webp" } });
+            return new Response(optimizedBuf, {
+                status: 200,
                 headers: {
-                    "Content-Type": contentType,
+                    "Content-Type": "image/webp",
                     "Cache-Control": "public, max-age=31536000, immutable",
                     "Access-Control-Allow-Origin": "*"
-                },
-                body: buf.toString("base64"),
-                isBase64Encoded: true
-            };
+                }
+            });
     
     }catch(err){
         console.log(err);
-        return {
-        statusCode: 500,
-        body: `Internal error: ${err.message || err}`,
-        };
+        return new Response(`Internal error: ${err.message || err}`, {
+            status: 500,
+            headers: {
+                "Content-Type": "text/plain"
+            },
+        });
     }
  
 }
