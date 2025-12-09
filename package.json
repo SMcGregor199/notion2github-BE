@@ -4,7 +4,8 @@
   "description": "",
   "main": "app.js",
   "scripts": {
-    "start": "node fetchNotionData.js"
+    "start": "node fetchNotionData.js",
+    "airtable": "node airtable.js"
   },
   "keywords": [],
   "author": "",
@@ -13,6 +14,7 @@
   "dependencies": {
     "@netlify/blobs": "^10.3.0",
     "@notionhq/client": "^5.1.0",
+    "airtable": "^0.12.2",
     "dotenv": "^17.2.3",
     "sharp": "^0.34.5",
     "slugify": "^1.6.6"
