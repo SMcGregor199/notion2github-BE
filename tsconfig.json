@@ -1,0 +1,47 @@
+{
+  "compilerOptions": {
+    /* ===========================
+       Project Structure
+    ============================ */
+    "rootDir": "./src",
+    "outDir": "./dist",
+
+    /* ===========================
+       Node Environment (ESM)
+    ============================ */
+    "target": "ES2022",               // Compile to stable modern JS
+    "module": "NodeNext",             // Modern ESM support
+    "moduleResolution": "NodeNext",   // Node ESM import rules
+    "lib": ["ES2022"],                // Standard Node runtime lib
+    "types": ["node"],                // Enable Node globals
+
+    /* ===========================
+       Type Safety
+    ============================ */
+    "strict": true,
+    "skipLibCheck": true,
+
+    /* ===========================
+       Output Tools
+    ============================ */
+    "sourceMap": true,                // For debugging
+
+    /* ===========================
+       Module Rules
+    ============================ */
+    "verbatimModuleSyntax": true,     // Do not rewrite import/export
+    "isolatedModules": true,          // Good for build tools + ESM
+    "allowImportingTsExtensions": false, // Prevent `.ts` extension imports
+
+    /* ===========================
+       Useful Extras
+    ============================ */
+    "resolveJsonModule": true         // Allow: import config from "./config.json"
+  },
+
+  /* ===========================
+     File Inclusion
+  ============================ */
+  "include": ["src"],
+  "exclude": ["node_modules", "dist"]
+}
