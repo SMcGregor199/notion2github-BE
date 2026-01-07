@@ -20,5 +20,5 @@ async function getBlogPostIds(pageId:string):Promise<string[]>{
         return [];
     }
 }
- 
+//getBlogPostIds(getEnvValue("NOTION_PAGE_ID"));
 export default getBlogPostIds;
