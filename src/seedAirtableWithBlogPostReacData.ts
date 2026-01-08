@@ -6,13 +6,11 @@ config();
 
 
 
-async function seedAirtableWithBlogIds(array: AirtableRecord[]):Promise<void>{
+async function seedAirtableWithBlogPostReactData(array: AirtableRecord[]):Promise<void>{
     const base = new Airtable({apiKey: getEnvValue("AIRTABLE_API_KEY")}).base(getEnvValue("AIRTABLE_BASE_ID"));
     try{
         const records = await base("Blog Posts").create(array);
-        records.forEach((record) => {
-            console.log(record.getId());
-        });
+        console.log("Successfully seeded airtable");
     }
     catch(err: unknown){
         console.error("Error seeding airtable:", err);
@@ -22,4 +20,4 @@ async function seedAirtableWithBlogIds(array: AirtableRecord[]):Promise<void>{
     
 }
 
-export default seedAirtableWithBlogIds;
+export default seedAirtableWithBlogPostReactData;
