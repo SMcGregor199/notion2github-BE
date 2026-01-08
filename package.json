@@ -9,8 +9,7 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "test": "vitest",
-    "airtable": "node airtable.js",
-    "test:getBlogIds": "tsx src/getBlogPostIds.ts"
+    "seed:airtable": "tsx src/index.ts"
   },
   "dependencies": {
     "@netlify/blobs": "^10.3.0",

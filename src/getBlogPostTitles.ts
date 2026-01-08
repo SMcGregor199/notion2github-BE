@@ -5,16 +5,25 @@ const notion = new Client({
     auth: getEnvValue("NOTION_API_KEY"),
 })
 
-async function getBlogPostIds(pageId:string):Promise<string[]>{
+async function getBlogPostTitles(pageId:string):Promise<string[]>{
     try{
         const pageContentBlock : ListBlockChildrenResponse = await notion.blocks.children.list({block_id: pageId});
         const pageContentBlockResults : (BlockObjectResponse | PartialBlockObjectResponse)[] = pageContentBlock.results;
-        const blogPostIds : string[] = pageContentBlockResults.map((page:BlockObjectResponse | PartialBlockObjectResponse):string=>page.id); 
-        return blogPostIds;
+        const blogPostTiles: string[] = [];
+        for(let block of pageContentBlockResults){
+            if("type" in block){
+                if(block.type === "child_page"){
+                    blogPostTiles.push(block.child_page.title);
+                }
+            }
+        }
+        //console.log(blogPostTiles);
+        return blogPostTiles;
     }
     catch(err: unknown){
-        console.error("Error Grabbing Blog Ids:", err);
+        console.error("Error Grabbing Blog Titles:", err);
         return [];
     }
 }
-export default getBlogPostIds;
+//getBlogPostTitles(getEnvValue("NOTION_PAGE_ID"));
+export default getBlogPostTitles;
