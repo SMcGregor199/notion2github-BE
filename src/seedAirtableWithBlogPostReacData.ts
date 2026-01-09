@@ -9,7 +9,7 @@ config();
 async function seedAirtableWithBlogPostReactData(array: AirtableRecord[]):Promise<void>{
     const base = new Airtable({apiKey: getEnvValue("AIRTABLE_API_KEY")}).base(getEnvValue("AIRTABLE_BASE_ID"));
     try{
-        const records = await base("Blog Posts").create(array);
+        await base("Blog Posts").create(array);
         console.log("Successfully seeded airtable");
     }
     catch(err: unknown){

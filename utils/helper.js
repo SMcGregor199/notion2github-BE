@@ -15,7 +15,6 @@ async function getChildPages(pageId){
             
             response.results.filter((page)=>page.type ==='child_page').map(async(page)=>{
                 let thePageId = page.id;
-                //console.log(page);
                 let pageContent = await getPageContentById(thePageId);
                 let tag = pageContent.results[pageContent.results.length-1].to_do.rich_text[1].text.content;
                 let title = await getPageTitleById(thePageId);
