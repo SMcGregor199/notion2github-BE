@@ -25,7 +25,7 @@ export default async(request, context) => {
                     "Access-Control-Allow-Origin": "*",
                     "Access-Control-Expose-Headers": "ETag",
                     ETag: version,
-                },
+                }
             });
         }
         const body = await store.get(version,{type:"json"});
