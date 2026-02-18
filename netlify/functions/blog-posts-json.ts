@@ -1,6 +1,9 @@
 import type {Context} from "@netlify/functions";
 import { getStore } from "@netlify/blobs";
-
+interface Manifest {
+    current_key: string;
+    lastUpdated: string;
+}
 export default async (req:Request,context:Context) => {
     try{    
         const content = getStore({ name: "content", siteID: process.env.NETLIFY_SITE_ID, token: process.env.NETLIFY_ACCESS_TOKEN });

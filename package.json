@@ -9,7 +9,9 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "test": "vitest",
-    "seed:airtable": "tsx src/index.ts"
+    "seed:airtable": "tsx src/index.ts",
+    "dev:server": "tsx src/server/index.ts",
+    "clean": "rm -rf dist"
   },
   "dependencies": {
     "@netlify/blobs": "^10.3.0",
@@ -17,10 +19,12 @@
     "@notionhq/client": "^5.1.0",
     "airtable": "^0.12.2",
     "dotenv": "^17.2.3",
+    "express": "^5.2.1",
     "sharp": "^0.34.5",
     "slugify": "^1.6.6"
   },
   "devDependencies": {
+    "@types/express": "^5.0.6",
     "@types/node": "^24.10.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
