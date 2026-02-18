@@ -8,6 +8,7 @@
     "dev": "tsx src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
+    "start:server": "node dist/server/index.js",
     "test": "vitest",
     "seed:airtable": "tsx src/index.ts",
     "dev:server": "tsx src/server/index.ts",
