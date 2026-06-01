@@ -3,6 +3,7 @@ import { Client } from "@notionhq/client";
 import {config} from "dotenv";
 config();
 import sharp from "sharp";
+import { getNotionImageUrlFromPageContent } from "../../utils/notionImage.js";
 const NOTION_API_KEY = process.env.NOTION_API_KEY;
 async function getPageContentById(pageId){
     try{
@@ -11,27 +12,13 @@ async function getPageContentById(pageId){
     }
     catch(err){
         console.error("Error fetching page content:", err);
+        throw err;
     }
 
 }
 
-async function getPageImageUrlById(pageId){
-    try{
-        const pageContent = await getPageContentById(pageId);
-        const imageObject = pageContent.results.find((block)=>block.hasOwnProperty("image"));
-        
-        return imageObject.image.file.url;
-    }
-    catch(err){
-        console.log("Error fetching page image:", err);
-    }
-}
 
-
-const store  = getStore({ name: "images",
-    siteID: process.env.NETLIFY_SITE_ID,
-    token: process.env.NETLIFY_ACCESS_TOKEN
-});
+const store  = getStore("images", { consistency: "strong" });
 
 
 //initilizing the Notion client
@@ -60,7 +47,19 @@ export default async (request,context)=> {
         }
 
         // If we don't have the image cached, fetch it from Notion and cache it
-        const imageFileUrl = await getPageImageUrlById(blockId);
+        const pageContent = await getPageContentById(blockId);
+        const imageFileUrl = getNotionImageUrlFromPageContent(pageContent);
+
+        if (!imageFileUrl) {
+            return new Response("No image found for blockId", {
+                status: 404,
+                headers: {
+                    "Content-Type": "text/plain",
+                    "Access-Control-Allow-Origin": "*"
+                }
+            });
+        }
+
         const res = await fetch(imageFileUrl);
 
         if (!res.ok) {
