@@ -6,7 +6,7 @@ interface Manifest {
 }
 export default async (req:Request,context:Context) => {
     try{    
-        const content = getStore({ name: "content", siteID: process.env.NETLIFY_SITE_ID, token: process.env.NETLIFY_ACCESS_TOKEN });
+        const content = getStore("content", { consistency: "strong" });
         const manifest = await content.get("content/manifest.json", {type:"json"});
         if (!manifest) return new Response("manifest not found",{status:404});
         const version = manifest.current_key;

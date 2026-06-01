@@ -12,7 +12,7 @@ export default async(request, context) => {
         if (request.method === "OPTIONS") {
             return new Response(null,{status:204,headers:{"Access-Control-Allow-Origin": "*","Access-Control-Allow-Methods": "GET, OPTIONS","Access-Control-Allow-Headers": request.headers.get("access-control-request-headers")}})
         }
-        const store = getStore({ name: "content", siteID: process.env.NETLIFY_SITE_ID, token: process.env.NETLIFY_ACCESS_TOKEN });
+        const store = getStore("content", { consistency: "strong" });
         const manifest = await store.get("content/manifest.json", {type:"json"});
         if (!manifest) return new Response("manifest not found",{status:404,headers:{"Access-Control-Allow-Origin": "*"}});
         
