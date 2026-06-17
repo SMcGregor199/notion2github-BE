@@ -1,11 +1,13 @@
 import { createAirtableReactionAdapter } from "./airtableReactionAdapter.js";
 import {
+  ReactionSetupError,
   ReactionValidationError,
+  isLazyAggregateUpsertEnabled,
   isReactionKey,
   readReactionState,
   submitReaction,
 } from "./reactionService.js";
-import type { ReactionRequest } from "./types.js";
+import type { ReactionAdapter, ReactionErrorBody, ReactionRequest } from "./types.js";
 
 const DEFAULT_ALLOWED_ORIGINS = [
   "https://shaynemcgregor.dev",
@@ -13,7 +15,10 @@ const DEFAULT_ALLOWED_ORIGINS = [
   "http://localhost:5173",
 ];
 
-export async function handleReactionRequest(request: Request): Promise<Response> {
+export async function handleReactionRequest(
+  request: Request,
+  adapter?: ReactionAdapter,
+): Promise<Response> {
   const origin = request.headers.get("origin");
   const corsHeaders = buildCorsHeaders(origin);
 
@@ -26,35 +31,59 @@ export async function handleReactionRequest(request: Request): Promise<Response>
 
   try {
     if (request.method === "GET") {
+      const reactionAdapter = adapter ?? createAirtableReactionAdapter();
       const url = new URL(request.url);
       const postId = url.searchParams.get("postId") ?? "";
       const blogTitle = url.searchParams.get("blogTitle") ?? undefined;
       const visitorId = url.searchParams.get("visitorId") ?? undefined;
-      const body = await readReactionState(createAirtableReactionAdapter(), {
-        postId,
-        blogTitle,
-        visitorId,
-      });
+      const body = await readReactionState(
+        reactionAdapter,
+        {
+          postId,
+          blogTitle,
+          visitorId,
+        },
+        {
+          allowAggregateCreate: isLazyAggregateUpsertEnabled(),
+        },
+      );
       return jsonResponse(body, 200, corsHeaders);
     }
 
     if (request.method === "POST") {
+      const reactionAdapter = adapter ?? createAirtableReactionAdapter();
       const body = parseReactionRequest(await readJsonBody(request));
-      const response = await submitReaction(createAirtableReactionAdapter(), body);
+      const response = await submitReaction(reactionAdapter, body, {
+        allowAggregateCreate: isLazyAggregateUpsertEnabled(),
+      });
       return jsonResponse(response, 200, corsHeaders);
     }
 
-    return jsonResponse({ error: "Method not allowed." }, 405, {
+    return jsonResponse(errorBody("invalid_request", "Method not allowed."), 405, {
       ...corsHeaders,
       Allow: "GET, POST, OPTIONS",
     });
   } catch (err) {
     if (err instanceof ReactionValidationError) {
-      return jsonResponse({ error: err.message }, err.status, corsHeaders);
+      logReactionError("validation", err.code, request);
+      return jsonResponse(errorBody(err.code, err.message), err.status, corsHeaders);
     }
 
-    console.error("Reaction API error", err);
-    return jsonResponse({ error: "Unable to update reactions." }, 500, corsHeaders);
+    if (err instanceof ReactionSetupError) {
+      logReactionError("setup", err.code, request);
+      return jsonResponse(errorBody(err.code, err.message), err.status, corsHeaders);
+    }
+
+    console.error("Reaction API unexpected error", {
+      method: request.method,
+      path: safePath(request.url),
+      errorType: err instanceof Error ? err.name : typeof err,
+    });
+    return jsonResponse(
+      errorBody("reaction_setup_unavailable", "Reaction data is temporarily unavailable."),
+      500,
+      corsHeaders,
+    );
   }
 }
 
@@ -87,12 +116,12 @@ function getAllowedOrigins(): string[] {
 async function readJsonBody(request: Request): Promise<unknown> {
   const text = await request.text();
   if (text.length > 4096) {
-    throw new ReactionValidationError("Request body is too large.");
+    throw new ReactionValidationError("invalid_request", "Request body is too large.");
   }
   try {
     return JSON.parse(text);
   } catch {
-    throw new ReactionValidationError("Invalid JSON body.");
+    throw new ReactionValidationError("invalid_request", "Invalid JSON body.");
   }
 }
 
@@ -109,13 +138,13 @@ function jsonResponse(body: unknown, status: number, headers: Record<string, str
 
 function parseReactionRequest(value: unknown): ReactionRequest {
   if (!value || typeof value !== "object") {
-    throw new ReactionValidationError("Invalid JSON body.");
+    throw new ReactionValidationError("invalid_request", "Invalid JSON body.");
   }
 
   const record = value as Record<string, unknown>;
   const reaction = record.reaction;
   if (reaction !== null && reaction !== undefined && !isReactionKey(reaction)) {
-    throw new ReactionValidationError("Invalid reaction.");
+    throw new ReactionValidationError("invalid_reaction", "Invalid reaction.");
   }
 
   return {
@@ -124,4 +153,39 @@ function parseReactionRequest(value: unknown): ReactionRequest {
     visitorId: record.visitorId,
     reaction: reaction === undefined ? null : reaction,
   } as ReactionRequest;
+}
+
+function errorBody(code: ReactionErrorBody["error"]["code"], message: string): ReactionErrorBody {
+  return {
+    error: {
+      code,
+      message,
+    },
+  };
+}
+
+function logReactionError(kind: string, code: string, request: Request): void {
+  const url = new URL(request.url);
+  const postId = request.method === "GET" ? url.searchParams.get("postId") : undefined;
+  console.error("Reaction API controlled error", {
+    kind,
+    code,
+    method: request.method,
+    path: url.pathname,
+    postIdShape: postId ? describePostIdShape(postId) : "body_or_absent",
+  });
+}
+
+function safePath(url: string): string {
+  return new URL(url).pathname;
+}
+
+function describePostIdShape(postId: string): string {
+  if (!postId) {
+    return "missing";
+  }
+  if (/^[A-Za-z0-9][A-Za-z0-9_-]{2,127}$/.test(postId)) {
+    return "valid_shape";
+  }
+  return "invalid_shape";
 }

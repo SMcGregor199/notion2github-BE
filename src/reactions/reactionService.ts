@@ -2,6 +2,7 @@ import type {
   AggregateRecord,
   ReactionAdapter,
   ReactionCounts,
+  ReactionErrorCode,
   ReactionKey,
   ReactionRequest,
   ReactionState,
@@ -26,7 +27,32 @@ const POST_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{2,127}$/;
 const VISITOR_ID_PATTERN = /^rxv_[A-Za-z0-9_-]{16,96}$/;
 
 export class ReactionValidationError extends Error {
+  constructor(
+    public readonly code: ReactionErrorCode,
+    message: string,
+  ) {
+    super(message);
+  }
+
   status = 400;
+}
+
+export class ReactionSetupError extends Error {
+  constructor(
+    public readonly code: ReactionErrorCode,
+    message: string,
+    public readonly status = 503,
+  ) {
+    super(message);
+  }
+}
+
+type AggregateOptions = {
+  allowAggregateCreate?: boolean;
+};
+
+export function isLazyAggregateUpsertEnabled(): boolean {
+  return process.env.REACTION_ENABLE_LAZY_AGGREGATE_UPSERT === "true";
 }
 
 export function emptyReactionCounts(): ReactionCounts {
@@ -48,14 +74,14 @@ export function normalizeCounts(counts: Partial<ReactionCounts> | undefined): Re
 
 export function validatePostId(postId: unknown): string {
   if (typeof postId !== "string" || !POST_ID_PATTERN.test(postId)) {
-    throw new ReactionValidationError("Invalid post id.");
+    throw new ReactionValidationError("invalid_post_id", "Invalid post id.");
   }
   return postId;
 }
 
 export function validateVisitorId(visitorId: unknown): string {
   if (typeof visitorId !== "string" || !VISITOR_ID_PATTERN.test(visitorId)) {
-    throw new ReactionValidationError("Invalid visitor id.");
+    throw new ReactionValidationError("invalid_visitor_id", "Invalid visitor id.");
   }
   return visitorId;
 }
@@ -65,7 +91,7 @@ export function validateReaction(value: unknown): ReactionKey | null {
     return null;
   }
   if (!isReactionKey(value)) {
-    throw new ReactionValidationError("Invalid reaction.");
+    throw new ReactionValidationError("invalid_reaction", "Invalid reaction.");
   }
   return value;
 }
@@ -73,10 +99,11 @@ export function validateReaction(value: unknown): ReactionKey | null {
 export async function readReactionState(
   adapter: ReactionAdapter,
   request: Pick<ReactionRequest, "postId" | "blogTitle" | "visitorId">,
+  options: AggregateOptions = {},
 ): Promise<ReactionState> {
   const postId = validatePostId(request.postId);
   const visitorId = request.visitorId ? validateVisitorId(request.visitorId) : null;
-  const aggregate = await ensureAggregate(adapter, postId, request.blogTitle);
+  const aggregate = await ensureAggregate(adapter, postId, request.blogTitle, options);
   const selection = visitorId ? await adapter.findSelection(postId, visitorId) : null;
 
   return {
@@ -89,11 +116,12 @@ export async function readReactionState(
 export async function submitReaction(
   adapter: ReactionAdapter,
   request: ReactionRequest,
+  options: AggregateOptions = {},
 ): Promise<ReactionState> {
   const postId = validatePostId(request.postId);
   const visitorId = validateVisitorId(request.visitorId);
   const requestedReaction = validateReaction(request.reaction);
-  const aggregate = await ensureAggregate(adapter, postId, request.blogTitle);
+  const aggregate = await ensureAggregate(adapter, postId, request.blogTitle, options);
   const previousSelection = await adapter.findSelection(postId, visitorId);
   const counts = applyReactionDelta(aggregate.counts, previousSelection, requestedReaction);
   const updatedAggregate = await adapter.updateAggregateCounts(aggregate.recordId, counts);
@@ -121,6 +149,7 @@ async function ensureAggregate(
   adapter: ReactionAdapter,
   postId: string,
   blogTitle = "Untitled post",
+  options: AggregateOptions = {},
 ): Promise<AggregateRecord> {
   const existing = await adapter.findAggregateByPostId(postId);
   if (existing) {
@@ -128,6 +157,12 @@ async function ensureAggregate(
       ...existing,
       counts: normalizeCounts(existing.counts),
     };
+  }
+  if (!options.allowAggregateCreate) {
+    throw new ReactionSetupError(
+      "missing_aggregate_record",
+      "Reaction counts are not configured for this post yet.",
+    );
   }
   return adapter.createAggregate(postId, blogTitle.trim() || "Untitled post");
 }
