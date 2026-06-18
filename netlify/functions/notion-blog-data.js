@@ -1,6 +1,6 @@
 import { getStore } from "@netlify/blobs";
 import {config} from "dotenv";
-config();
+config({ quiet: true });
 import fetchAndStoreLatestData from "../../utils/fetchAndStoreLatestData";
 
 

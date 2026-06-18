@@ -1,5 +1,5 @@
 import {config} from 'dotenv';
-config();
+config({ quiet: true });
 import slugify from 'slugify';
 import fs from "fs/promises";
 import {Client} from '@notionhq/client';

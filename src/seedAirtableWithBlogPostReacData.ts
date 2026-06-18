@@ -2,7 +2,7 @@ import Airtable from "airtable";
 import getEnvValue from "./utils/getEnvValue.js";
 import type {AirtableRecord} from "./utils/types/index.js";
 import {config} from "dotenv";
-config();
+config({ quiet: true });
 
 
 

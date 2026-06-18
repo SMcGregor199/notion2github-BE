@@ -1,5 +1,5 @@
 import {config} from "dotenv";
-config();
+config({ quiet: true });
 export default function getEnvValue(name: string): string {
   const value = process.env[name];
   if (!value){

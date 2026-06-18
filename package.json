@@ -10,7 +10,9 @@
     "start": "node dist/index.js",
     "start:server": "node dist/server/index.js",
     "test": "vitest",
-    "seed:airtable": "tsx src/index.ts",
+    "seed:airtable": "npm run reactions:setup:dry-run",
+    "reactions:setup:dry-run": "tsx src/setupReactionAggregates.ts --dry-run",
+    "reactions:setup:write": "tsx src/setupReactionAggregates.ts --write",
     "dev:server": "tsx src/server/index.ts",
     "clean": "rm -rf dist"
   },

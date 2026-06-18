@@ -14,6 +14,7 @@ import type {
   ReactionKey,
   SelectionRecord,
 } from "./types.js";
+import type { AggregateSetupAdapter } from "./aggregateSetupService.js";
 
 type AirtableRecordLike = {
   id: string;
@@ -182,6 +183,39 @@ export function createAirtableReactionAdapterFromBase(base: AirtableBase): React
   };
 }
 
+export function createAirtableAggregateSetupAdapter(): AggregateSetupAdapter {
+  const base = new Airtable({ apiKey: readRequiredEnv("AIRTABLE_API_KEY") }).base(
+    readRequiredEnv("AIRTABLE_BASE_ID"),
+  ) as unknown as AirtableBase;
+  return createAirtableAggregateSetupAdapterFromBase(base);
+}
+
+export function createAirtableAggregateSetupAdapterFromBase(base: AirtableBase): AggregateSetupAdapter {
+  return {
+    async verifyAggregateSetup(): Promise<void> {
+      await withAirtableSetupErrors(
+        "verify_aggregate_setup",
+        "aggregate",
+        () => selectFirstPage(base, AGGREGATE_TABLE, `{Id} != ''`, 1),
+      );
+    },
+
+    async findAggregatesByPostId(postId: string): Promise<AggregateRecord[]> {
+      const records = await withAirtableSetupErrors(
+        "find_aggregates_for_setup",
+        "aggregate",
+        () => selectFirstPage(base, AGGREGATE_TABLE, `{Id} = ${quoteFormula(postId)}`, 100),
+      );
+      return records.map((record) => aggregateFromRecord(record));
+    },
+
+    async createAggregate(postId: string, blogTitle: string): Promise<AggregateRecord> {
+      const reactionAdapter = createAirtableReactionAdapterFromBase(base);
+      return reactionAdapter.createAggregate(postId, blogTitle);
+    },
+  };
+}
+
 function readRequiredEnv(name: string): string {
   try {
     return getEnvValue(name);
@@ -306,12 +340,13 @@ async function selectFirstPage(
   base: AirtableBase,
   tableName: string,
   filterByFormula: string,
+  maxRecords = 1,
 ): Promise<AirtableRecordLike[]> {
   return base(tableName)
     .select({
       filterByFormula,
-      maxRecords: 1,
-      pageSize: 1,
+      maxRecords,
+      pageSize: Math.min(maxRecords, 100),
     })
     .firstPage();
 }
