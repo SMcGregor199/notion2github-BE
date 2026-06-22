@@ -18,6 +18,8 @@ Backend and Netlify Functions layer for `shaynemcgregor.dev`.
 - Do not change backend data contracts without considering downstream frontend and RSS consumers.
 - Do not inspect `.env`, `.netlify/state.json`, or secret files.
 - Do not run `npm run seed:airtable` or any production write flow without explicit approval.
+- Do not change `RSS_AUTO_UPDATE_ON_BLOG_REFRESH`, write production RSS blobs, or change RSS deployment/routing without explicit approval.
+- The backend RSS serving function serves the configured RSS Blob for the public `/rss.xml` route after the approved production activation.
 
 ## Verification Expectations
 
@@ -37,4 +39,5 @@ Backend and Netlify Functions layer for `shaynemcgregor.dev`.
 - State which files changed.
 - State which commands ran and which were skipped.
 - Call out any downstream frontend or RSS follow-up.
+- Report RSS auto-update status, environment variable names used, and whether RSS failures are non-blocking.
 - Do not create commits, branches, PRs, releases, or tags unless Shayne asks.
