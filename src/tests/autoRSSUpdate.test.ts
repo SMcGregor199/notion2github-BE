@@ -173,6 +173,26 @@ describe("backend RSS feed generation", () => {
     expect(xml).not.toContain("<enclosure");
   });
 
+  it("uses rich body paragraph text as the RSS fallback description", () => {
+    const xml = generateRSSFeedXML(
+      [
+        {
+          ...post("post_rich_body"),
+          summary: "",
+          body: [
+            {
+              heading: "Intro",
+              paras: [[{ text: "Read " }, { text: "the guide", href: "https://example.com/guide" }, { text: "." }]],
+            },
+          ],
+        },
+      ],
+      { buildTime: new Date("2026-02-15T12:00:00.000Z") },
+    );
+
+    expect(xml).toContain("<description>Read the guide.</description>");
+  });
+
   it("rejects malformed posts instead of creating partial RSS", () => {
     expect(() =>
       generateRSSFeedXML([{ id: "post_bad", title: "Bad", link: "bad", publishedDate: "not-a-date" }]),

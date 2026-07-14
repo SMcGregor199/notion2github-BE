@@ -156,7 +156,7 @@ function descriptionFromPost(post: RSSBlogPostInput): string {
     const paras = (section as { paras?: unknown }).paras;
     if (!Array.isArray(paras)) continue;
     for (const para of paras) {
-      const text = stringField(para);
+      const text = bodyParagraphText(para);
       if (text) return text;
     }
   }
@@ -188,6 +188,17 @@ function formatRSSDate(date: Date): string {
 
 function stringField(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
+}
+
+function bodyParagraphText(value: unknown): string {
+  if (typeof value === "string") return value.trim();
+  if (!Array.isArray(value)) return "";
+
+  return value.map((part) => {
+    if (typeof part === "string") return part;
+    if (!part || typeof part !== "object" || !("text" in part)) return "";
+    return typeof part.text === "string" ? part.text : "";
+  }).join("").replace(/\s+/g, " ").trim();
 }
 
 function trimTrailingSlash(value: string): string {

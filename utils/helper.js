@@ -72,13 +72,40 @@ async function getPageBodyContent(pageId){
     const bodyContent = pageContent.results.slice(1, -1);
     const grouped = bodyContent.reduce((acc,curr)=>{
         if(curr.type === "heading_3"){
-            acc.push({heading:curr.heading_3.rich_text[0].plain_text,paras:[]});
+            acc.push({heading:plainTextFromRichText(curr.heading_3.rich_text),paras:[]});
         } else if(curr.type === "paragraph"){
-            acc[acc.length-1].paras.push(curr.paragraph.rich_text[0].plain_text);
+            if(acc.length === 0){
+                acc.push({heading:"",paras:[]});
+            }
+            acc[acc.length-1].paras.push(serializeRichText(curr.paragraph.rich_text));
         }
         return acc;
     },[]);
     return grouped;
+}
+
+function serializeRichText(richText = []){
+    const hasLink = richText.some((part)=>getRichTextHref(part));
+    if(!hasLink){
+        return plainTextFromRichText(richText);
+    }
+
+    return richText.map((part)=> {
+        const span = { text: part.plain_text || "" };
+        const href = getRichTextHref(part);
+        if(href){
+            span.href = href;
+        }
+        return span;
+    }).filter((part)=>part.text);
+}
+
+function plainTextFromRichText(richText = []){
+    return richText.map((part)=>part.plain_text || "").join("");
+}
+
+function getRichTextHref(part){
+    return part?.href || part?.text?.link?.url || "";
 }
 
 async function getPageMetadataById(pageId){
@@ -99,4 +126,4 @@ async function savePagesToFile(id){
         console.error("Error writing file:", err);
     }
 }
-export{savePagesToFile}
+export{savePagesToFile, serializeRichText}
