@@ -32,7 +32,7 @@ For the one-time Notion database button and automation configuration, see [docs/
 - The backend contract should be treated as the primary interface for the frontend and RSS generator.
 - When `NOTION_DATABASE_ID` is configured, blog posts are read from a Notion database/data source instead of child pages under `NOTION_PAGE_ID`. This value may be either the database ID or a `collection://...` data source ID.
 - The Notion CMS database uses `Name`, `Published`, `Tag`, `Summary`, `Slug`, `Feature Image`, and `Publication Date` properties. Only posts with `Published` checked are returned publicly.
-- CMS authoring adds `Status`, `CMS Record ID`, `Metadata State`, `Metadata Error`, and a `Generate Metadata` button. `Published` remains the publication source of truth; `cms-publish-sync` derives the `Status` tag from it.
+- CMS authoring adds a computed `Status`, `CMS Record ID`, `Metadata State`, `Metadata Error`, and a `Generate Metadata` button. `Published` remains the publication source of truth; Notion calculates `Status` from it.
 - `cms-generate` receives an authenticated Notion automation webhook, generates initial tag/summary/slug/feature image metadata, and uploads the generated image into Notion's `Feature Image` property. `cms-publish-sync` records the first publication timestamp and refreshes the public JSON/RSS data after any publication toggle.
 - The CMS webhook environment variables are `CMS_WEBHOOK_SECRET`, `OPENAI_API_KEY`, `CMS_TEXT_MODEL`, `CMS_IMAGE_MODEL`, and `CMS_IMAGE_QUALITY`. The default image model is `gpt-image-2` at high quality.
 - Database-backed posts expose Markdown body content as `bodyMarkdown`; legacy child-page mode still includes the older nested `body` structure for compatibility.
