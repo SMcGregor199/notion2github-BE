@@ -6,6 +6,7 @@ export type RSSBlogPostInput = {
   thumbnail?: unknown;
   publishedDate?: unknown;
   updatedDate?: unknown;
+  bodyMarkdown?: unknown;
   body?: unknown;
 };
 
@@ -150,18 +151,51 @@ function descriptionFromPost(post: RSSBlogPostInput): string {
   const summary = stringField(post.summary);
   if (summary) return summary;
 
+  const markdownDescription = descriptionFromMarkdown(stringField(post.bodyMarkdown));
+  if (markdownDescription) return markdownDescription;
+
   if (!Array.isArray(post.body)) return "";
   for (const section of post.body) {
-    if (!section || typeof section !== "object" || !("paras" in section)) continue;
+    if (!section || typeof section !== "object") continue;
     const paras = (section as { paras?: unknown }).paras;
-    if (!Array.isArray(paras)) continue;
-    for (const para of paras) {
-      const text = bodyParagraphText(para);
+    if (Array.isArray(paras)) {
+      for (const para of paras) {
+        const text = bodyParagraphText(para);
+        if (text) return text;
+      }
+    }
+
+    const blocks = (section as { blocks?: unknown }).blocks;
+    if (!Array.isArray(blocks)) continue;
+    for (const block of blocks) {
+      const text = bodyBlockText(block);
       if (text) return text;
     }
   }
 
   return "";
+}
+
+function descriptionFromMarkdown(markdown: string): string {
+  return markdown
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/!\[[^\]]*]\([^)]*\)/g, " ")
+    .replace(/\[([^\]]+)]\([^)]*\)/g, "$1")
+    .replace(/[#>*_`~\-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function bodyBlockText(value: unknown): string {
+  if (!value || typeof value !== "object") return "";
+
+  const block = value as { type?: unknown; text?: unknown; caption?: unknown };
+  const type = typeof block.type === "string" ? block.type : "";
+  if (["divider", "image"].includes(type)) {
+    return bodyParagraphText(block.caption);
+  }
+
+  return bodyParagraphText(block.text) || bodyParagraphText(block.caption);
 }
 
 function imageContentType(imageUrl: string): string {

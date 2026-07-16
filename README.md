@@ -28,6 +28,10 @@ Node/TypeScript backend and Netlify Functions layer for `shaynemcgregor.dev`.
 - This repo is clearly Netlify-configured through `netlify.toml`, `netlify/functions/`, and `@netlify/*` dependencies.
 - It is the upstream source hub for the shared blog contract.
 - The backend contract should be treated as the primary interface for the frontend and RSS generator.
+- When `NOTION_DATABASE_ID` is configured, blog posts are read from a Notion database instead of child pages under `NOTION_PAGE_ID`.
+- The Notion CMS database uses `Name`, `Published`, `Tag`, `Summary`, `Slug`, and `Feature Image` properties. Only posts with `Published` checked are returned publicly.
+- Database-backed posts expose Markdown body content as `bodyMarkdown`; legacy child-page mode still includes the older nested `body` structure for compatibility.
+- Notion file/media feature images and page covers are registered in Netlify Blobs and served through `netlify/functions/notion-image`.
 - RSS auto-update is gated by `RSS_AUTO_UPDATE_ON_BLOG_REFRESH`; production activation currently uses `true` for the approved RSS function context.
 - Non-secret RSS configuration names are `RSS_AUTO_UPDATE_ON_BLOG_REFRESH`, `RSS_PUBLIC_URL`, `RSS_SITE_BASE_URL`, `RSS_OUTPUT_STORE`, `RSS_OUTPUT_KEY`, and `RSS_PREVIOUS_CONTENT_HASH_KEY`.
 - RSS update failures are non-blocking for blog JSON refreshes and preserve the last known good RSS output.

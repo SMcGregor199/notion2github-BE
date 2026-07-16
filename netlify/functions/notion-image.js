@@ -3,7 +3,8 @@ import { Client } from "@notionhq/client";
 import {config} from "dotenv";
 config();
 import sharp from "sharp";
-import { getNotionImageUrlFromPageContent } from "../../utils/notionImage.js";
+import { getNotionImageUrl, getNotionImageUrlFromPageContent } from "../../utils/notionImage.js";
+import { readRegisteredNotionImageSource } from "../../utils/notionPublicImages.js";
 const NOTION_API_KEY = process.env.NOTION_API_KEY;
 async function getPageContentById(pageId){
     try{
@@ -30,16 +31,18 @@ export default async (request,context)=> {
     try{
         const url = new URL(request.url);
         const blockId = url.searchParams.get("blockId");
+        const imageId = url.searchParams.get("imageId");
     
-        if (!blockId) return new Response("Missing blockId", {status:400}); 
+        if (!blockId && !imageId) return new Response("Missing blockId or imageId", {status:400}); 
         // If we have the raw binary image data cached, return it
-        const cached = await store.get(blockId, { type: "arrayBuffer" });
-        const meta   = await store.getMetadata(blockId);
+        const cacheKey = imageId || blockId;
+        const cached = await store.get(cacheKey, { type: "arrayBuffer" });
+        const meta   = await store.getMetadata(cacheKey);
         if (cached) {
             return new Response(cached, {
                 status: 200,
                 headers: {
-                "Content-Type": meta?.contentType || "image/webp",
+                "Content-Type": meta?.metadata?.contentType || "image/webp",
                 "Cache-Control": "public, max-age=31536000, immutable",
                 "Access-Control-Allow-Origin": "*"
                 }
@@ -47,11 +50,12 @@ export default async (request,context)=> {
         }
 
         // If we don't have the image cached, fetch it from Notion and cache it
-        const pageContent = await getPageContentById(blockId);
-        const imageFileUrl = getNotionImageUrlFromPageContent(pageContent);
+        const imageFileUrl = imageId
+            ? await readRegisteredNotionImageSource(imageId)
+            : await resolveLegacyNotionImageUrl(blockId);
 
         if (!imageFileUrl) {
-            return new Response("No image found for blockId", {
+            return new Response("No image found", {
                 status: 404,
                 headers: {
                     "Content-Type": "text/plain",
@@ -76,7 +80,7 @@ export default async (request,context)=> {
         .toFormat("webp", { quality: 80 })
         .toBuffer();
 
-        await store.set(blockId, optimizedBuf, { metadata: { contentType: "image/webp" } });
+        await store.set(cacheKey, optimizedBuf, { metadata: { contentType: "image/webp" } });
             return new Response(optimizedBuf, {
                 status: 200,
                 headers: {
@@ -96,4 +100,15 @@ export default async (request,context)=> {
         });
     }
  
+}
+
+async function resolveLegacyNotionImageUrl(blockId) {
+    const block = await notion.blocks.retrieve({ block_id: blockId });
+    const directImageUrl = getNotionImageUrl(block);
+    if (directImageUrl) {
+        return directImageUrl;
+    }
+
+    const pageContent = await getPageContentById(blockId);
+    return getNotionImageUrlFromPageContent(pageContent);
 }

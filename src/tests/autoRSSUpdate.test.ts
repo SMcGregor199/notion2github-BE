@@ -182,7 +182,11 @@ describe("backend RSS feed generation", () => {
           body: [
             {
               heading: "Intro",
-              paras: [[{ text: "Read " }, { text: "the guide", href: "https://example.com/guide" }, { text: "." }]],
+              paras: [[
+                { text: "Read " },
+                { text: "the guide", href: "https://example.com/guide", bold: true },
+                { text: "." },
+              ]],
             },
           ],
         },
@@ -191,6 +195,46 @@ describe("backend RSS feed generation", () => {
     );
 
     expect(xml).toContain("<description>Read the guide.</description>");
+  });
+
+  it("uses bodyMarkdown as the RSS fallback description before legacy body data", () => {
+    const xml = generateRSSFeedXML(
+      [
+        {
+          ...post("post_markdown"),
+          summary: "",
+          bodyMarkdown: "## Intro\n\nRead **this guide** with [context](https://example.com).",
+          body: [{ heading: "", paras: ["Legacy fallback."] }],
+        },
+      ],
+      { buildTime: new Date("2026-02-15T12:00:00.000Z") },
+    );
+
+    expect(xml).toContain("<description>Intro Read this guide with context.</description>");
+  });
+
+  it("uses block body text as the RSS fallback description when legacy paragraphs are absent", () => {
+    const xml = generateRSSFeedXML(
+      [
+        {
+          ...post("post_block_body"),
+          summary: "",
+          body: [
+            {
+              heading: "",
+              paras: [],
+              blocks: [
+                { type: "divider" },
+                { type: "quote", text: [{ text: "Block " }, { text: "fallback", bold: true }, { text: "." }] },
+              ],
+            },
+          ],
+        },
+      ],
+      { buildTime: new Date("2026-02-15T12:00:00.000Z") },
+    );
+
+    expect(xml).toContain("<description>Block fallback.</description>");
   });
 
   it("rejects malformed posts instead of creating partial RSS", () => {
