@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   getBodyBlocksFromPageContent,
+  getDateProperty,
   getPageBodyMarkdown,
   isPublishedDatabasePage,
   serializeNotionBodyBlocks,
@@ -142,6 +143,19 @@ describe("Notion rich text serialization", () => {
     })).toBe(false);
 
     expect(isPublishedDatabasePage({ properties: {} })).toBe(false);
+  });
+
+  it("reads Notion date properties for publication dates", () => {
+    expect(getDateProperty({
+      properties: {
+        "Publication Date": {
+          type: "date",
+          date: { start: "2026-01-10T13:58:01.000Z", end: null },
+        },
+      },
+    }, "Publication Date")).toBe("2026-01-10T13:58:01.000Z");
+
+    expect(getDateProperty({ properties: {} }, "Publication Date")).toBe("");
   });
 
   it("can omit a legacy image block from Markdown when it is promoted to the featured image", async () => {

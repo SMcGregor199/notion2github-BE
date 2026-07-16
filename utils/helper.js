@@ -22,6 +22,7 @@ const DATABASE_PROPERTIES = {
     summary: "Summary",
     slug: "Slug",
     featureImage: "Feature Image",
+    publicationDate: "Publication Date",
 };
 
 async function getChildPages(pageId) {
@@ -87,6 +88,7 @@ async function getDatabasePosts(databaseId) {
             const link = normalizeSlug(getRichTextProperty(page, DATABASE_PROPERTIES.slug)) || slugify(title, { lower: true });
             const { thumbnail, legacyImageBlockId } = await resolveFeaturedImageUrl(page, pageContent);
             const bodyMarkdown = await getPageBodyMarkdown(page.id, pageContent, { excludeBlockId: legacyImageBlockId });
+            const publishedDate = getDateProperty(page, DATABASE_PROPERTIES.publicationDate) || page.created_time || "";
 
             return {
                 id: page.id,
@@ -96,7 +98,7 @@ async function getDatabasePosts(databaseId) {
                 link,
                 thumbnail,
                 bodyMarkdown,
-                publishedDate: page.created_time || "",
+                publishedDate,
                 updatedDate: page.last_edited_time || "",
             };
         })
@@ -113,7 +115,10 @@ async function queryDatabasePages(databaseId) {
             data_source_id: dataSourceId,
             page_size: 100,
             start_cursor: cursor,
-            sorts: [{ timestamp: "created_time", direction: "descending" }],
+            sorts: [
+                { property: DATABASE_PROPERTIES.publicationDate, direction: "descending" },
+                { timestamp: "created_time", direction: "descending" },
+            ],
         });
         pages.push(...response.results);
         cursor = response.has_more ? response.next_cursor : undefined;
@@ -163,6 +168,15 @@ function getRichTextProperty(page, propertyName) {
     }
 
     return plainTextFromRichText(property.rich_text || []);
+}
+
+function getDateProperty(page, propertyName) {
+    const property = page?.properties?.[propertyName];
+    if (property?.type !== "date") {
+        return "";
+    }
+
+    return property.date?.start || "";
 }
 
 function getTagFromPage(page) {
@@ -495,5 +509,6 @@ export {
     serializeNotionBlock,
     getBodyBlocksFromPageContent,
     getPageBodyMarkdown,
+    getDateProperty,
     isPublishedDatabasePage,
 };
