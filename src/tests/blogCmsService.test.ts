@@ -12,6 +12,7 @@ describe("blog CMS metadata helpers", () => {
   it("extracts the record ID from direct and Notion property webhook payloads", () => {
     expect(extractCmsRecordId({ cmsRecordId: 42 })).toBe(42);
     expect(extractCmsRecordId({ properties: { "CMS Record ID": { number: 7 } } })).toBe(7);
+    expect(extractCmsRecordId({ properties: { "CMS Record ID": "BLOG-8" } })).toBe(8);
     expect(extractCmsRecordId({ recordId: "not-a-number" })).toBeNull();
   });
 

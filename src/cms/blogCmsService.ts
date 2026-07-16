@@ -60,12 +60,20 @@ export class CmsWorkflowError extends Error {
 export function extractCmsRecordId(payload: unknown): number | null {
   const candidates = collectRecordIdCandidates(payload);
   for (const candidate of candidates) {
-    const numberValue = Number(candidate);
+    const numberValue = parseCmsRecordId(candidate);
     if (Number.isSafeInteger(numberValue) && numberValue > 0) {
       return numberValue;
     }
   }
   return null;
+}
+
+function parseCmsRecordId(value: unknown): number {
+  if (typeof value === "string") {
+    const match = value.match(/(?:^|-)\d+$/);
+    if (match) return Number(match[0].replace(/^-/, ""));
+  }
+  return Number(value);
 }
 
 export function isAuthorizedWebhook(request: Request, secret: string | undefined): boolean {
