@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   getBodyBlocksFromPageContent,
+  getPageBodyMarkdown,
   isPublishedDatabasePage,
   serializeNotionBodyBlocks,
   serializeNotionBlock,
@@ -141,5 +142,39 @@ describe("Notion rich text serialization", () => {
     })).toBe(false);
 
     expect(isPublishedDatabasePage({ properties: {} })).toBe(false);
+  });
+
+  it("can omit a legacy image block from Markdown when it is promoted to the featured image", async () => {
+    const markdown = await getPageBodyMarkdown("page-1", {
+      results: [
+        {
+          id: "text-1",
+          type: "paragraph",
+          paragraph: {
+            rich_text: [
+              {
+                type: "text",
+                plain_text: "Body text.",
+                annotations: {},
+                text: { content: "Body text.", link: null },
+              },
+            ],
+          },
+        },
+        {
+          id: "image-1",
+          type: "image",
+          image: {
+            type: "external",
+            external: { url: "https://example.com/image.webp" },
+            caption: [{ plain_text: "Legacy featured image" }],
+          },
+        },
+      ],
+    }, { excludeBlockId: "image-1" });
+
+    expect(markdown).toContain("Body text.");
+    expect(markdown).not.toContain("Legacy featured image");
+    expect(markdown).not.toContain("example.com/image.webp");
   });
 });

@@ -85,8 +85,8 @@ async function getDatabasePosts(databaseId) {
             const tag = getTagFromPage(page) || legacyTag;
             const summary = getRichTextProperty(page, DATABASE_PROPERTIES.summary) || legacySummary;
             const link = normalizeSlug(getRichTextProperty(page, DATABASE_PROPERTIES.slug)) || slugify(title, { lower: true });
-            const thumbnail = await resolveFeaturedImageUrl(page, pageContent);
-            const bodyMarkdown = await getPageBodyMarkdown(page.id, pageContent);
+            const { thumbnail, legacyImageBlockId } = await resolveFeaturedImageUrl(page, pageContent);
+            const bodyMarkdown = await getPageBodyMarkdown(page.id, pageContent, { excludeBlockId: legacyImageBlockId });
 
             return {
                 id: page.id,
@@ -190,10 +190,18 @@ async function resolveFeaturedImageUrl(page, pageContent) {
     if (sourceUrl) {
         const imageId = createStableImageId(page.id, sourceUrl);
         await registerNotionImageSource(imageId, sourceUrl);
-        return publicImageUrlForImageId(imageId);
+        return { thumbnail: publicImageUrlForImageId(imageId), legacyImageBlockId: "" };
     }
 
-    return publicImageUrlForBlockId(page.id) || legacyFirstImageUrl(pageContent);
+    const legacyImageBlock = legacyFirstImageBlock(pageContent);
+    if (legacyImageBlock?.id) {
+        return {
+            thumbnail: publicImageUrlForBlockId(legacyImageBlock.id),
+            legacyImageBlockId: legacyImageBlock.id,
+        };
+    }
+
+    return { thumbnail: publicImageUrlForBlockId(page.id), legacyImageBlockId: "" };
 }
 
 function getFilePropertyUrl(page, propertyName) {
@@ -210,12 +218,10 @@ function getFilePropertyUrl(page, propertyName) {
     return getNotionFileUrl(file);
 }
 
-function legacyFirstImageUrl(pageContent) {
-    const block = Array.isArray(pageContent?.results)
+function legacyFirstImageBlock(pageContent) {
+    return Array.isArray(pageContent?.results)
         ? pageContent.results.find((item) => item?.type === "image")
         : null;
-    const url = getNotionFileUrl(block?.image);
-    return typeof url === "string" ? url : "";
 }
 
 function normalizeSlug(value) {
@@ -255,9 +261,10 @@ async function getPageBodyContent(pageId, pageContent) {
     return serializeNotionBodyBlocks(getBodyBlocksFromPageContent(content));
 }
 
-async function getPageBodyMarkdown(pageId, pageContent) {
+async function getPageBodyMarkdown(pageId, pageContent, options = {}) {
     const content = pageContent || await getPageContentById(pageId);
-    const bodyBlocks = getBodyBlocksFromPageContent(content);
+    const bodyBlocks = getBodyBlocksFromPageContent(content)
+        .filter((block) => !options.excludeBlockId || block?.id !== options.excludeBlockId);
     const n2m = new NotionToMarkdown({
         notionClient: notion,
         config: { parseChildPages: false },
