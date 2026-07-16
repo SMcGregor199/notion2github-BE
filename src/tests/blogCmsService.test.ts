@@ -6,6 +6,7 @@ import {
   extractCmsRecordId,
   normalizeSummary,
   slugForTitle,
+  statusForPublished,
 } from "../cms/blogCmsService.js";
 
 describe("blog CMS metadata helpers", () => {
@@ -24,6 +25,11 @@ describe("blog CMS metadata helpers", () => {
     expect(slugForTitle("A Reliable API: What Changed?")).toBe("a-reliable-api-what-changed");
     expect(chooseUniqueSlug("a-post", ["another-post"], "page-1")).toBe("a-post");
     expect(chooseUniqueSlug("a-post", ["a-post"], "page-1")).toMatch(/^a-post-[a-f0-9]{8}$/);
+  });
+
+  it("derives the visible status from the publication checkbox", () => {
+    expect(statusForPublished(true)).toBe("Live");
+    expect(statusForPublished(false)).toBe("Draft");
   });
 
   it("keeps the visual prompt post-specific and prevents rendered copy", () => {

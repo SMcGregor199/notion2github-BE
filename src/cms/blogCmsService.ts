@@ -18,6 +18,7 @@ export const CMS_PROPERTIES = {
   slug: "Slug",
   featureImage: "Feature Image",
   publicationDate: "Publication Date",
+  status: "Status",
   recordId: "CMS Record ID",
   metadataState: "Metadata State",
   metadataError: "Metadata Error",
@@ -96,6 +97,10 @@ export function chooseUniqueSlug(baseSlug: string, existingSlugs: Iterable<strin
 
   const suffix = createHash("sha256").update(pageId).digest("hex").slice(0, 8);
   return `${baseSlug}-${suffix}`;
+}
+
+export function statusForPublished(published: boolean): "Live" | "Draft" {
+  return published ? "Live" : "Draft";
 }
 
 export function buildMetadataPrompt(input: { title: string; markdown: string; existingTags: string[] }): string {
@@ -198,12 +203,14 @@ export async function syncCmsPublication(recordId: number): Promise<{ pageId: st
   const publicationDate = getDateValue(page, CMS_PROPERTIES.publicationDate);
   let publicationDateSet = false;
 
+  const properties: Record<string, unknown> = {
+    [CMS_PROPERTIES.status]: { select: { name: statusForPublished(published) } },
+  };
   if (published && !publicationDate) {
-    await updateCmsPage(page.id, {
-      [CMS_PROPERTIES.publicationDate]: { date: { start: new Date().toISOString() } },
-    });
+    properties[CMS_PROPERTIES.publicationDate] = { date: { start: new Date().toISOString() } };
     publicationDateSet = true;
   }
+  await updateCmsPage(page.id, properties);
 
   return { pageId: page.id, published, publicationDateSet };
 }

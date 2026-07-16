@@ -7,13 +7,13 @@ The CMS uses Notion as the authoring surface and the backend Netlify site as the
 1. Add a new row to `Blog CMS Posts` and write the article in its page body.
 2. Click `Generate Metadata`.
 3. Wait for `Metadata State` to become `Ready`, then review the generated tag, summary, slug, and feature image.
-4. Check `Published` when the post is ready. `Status` immediately reads `Live`, `Publication Date` is assigned once, and the public blog/RSS data refreshes.
+4. Check `Published` when the post is ready. The publish-sync automation changes `Status` to `Live`, assigns `Publication Date` once, and refreshes public blog/RSS data.
 
 ## One-Time Notion Setup
 
 Notion database buttons and database automations must be configured in the Notion UI; the Notion API does not expose their configuration.
 
-Create a default database template named `New Blog Draft` with `Published` unchecked and `Metadata State` set to `New`. Use that template for every new row.
+Create a default database template named `New Blog Draft` with `Published` unchecked, `Status` set to `Draft`, and `Metadata State` set to `New`. Use that template for every new row.
 
 ### Generate Metadata Button
 
@@ -33,7 +33,7 @@ Create a default database template named `New Blog Draft` with `Published` unche
    - Header: `X-CMS-Webhook-Secret` with the value of the Netlify `CMS_WEBHOOK_SECRET` variable.
    - Include the `CMS Record ID` property in the webhook payload.
 
-The publish endpoint only sets `Publication Date` when the checkbox is true and the field is empty. Unpublishing hides the post but retains its original publication date.
+The publish endpoint derives `Status` from `Published`: checked is `Live`, unchecked is `Draft`. It only sets `Publication Date` when the checkbox is true and the field is empty. Unpublishing hides the post but retains its original publication date.
 
 ## Netlify Variables
 
