@@ -104,12 +104,13 @@ async function getDatabasePosts(databaseId) {
 }
 
 async function queryDatabasePages(databaseId) {
+    const dataSourceId = await resolveDataSourceId(databaseId);
     const pages = [];
     let cursor;
 
     do {
-        const response = await notion.databases.query({
-            database_id: databaseId,
+        const response = await notion.dataSources.query({
+            data_source_id: dataSourceId,
             page_size: 100,
             start_cursor: cursor,
             sorts: [{ timestamp: "created_time", direction: "descending" }],
@@ -119,6 +120,16 @@ async function queryDatabasePages(databaseId) {
     } while (cursor);
 
     return pages;
+}
+
+async function resolveDataSourceId(databaseOrDataSourceId) {
+    const normalizedId = String(databaseOrDataSourceId || "").replace(/^collection:\/\//, "");
+    try {
+        const database = await notion.databases.retrieve({ database_id: normalizedId });
+        return database?.data_sources?.[0]?.id || normalizedId;
+    } catch {
+        return normalizedId;
+    }
 }
 
 function isPublishedDatabasePage(page) {

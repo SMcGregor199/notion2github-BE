@@ -28,7 +28,7 @@ Node/TypeScript backend and Netlify Functions layer for `shaynemcgregor.dev`.
 - This repo is clearly Netlify-configured through `netlify.toml`, `netlify/functions/`, and `@netlify/*` dependencies.
 - It is the upstream source hub for the shared blog contract.
 - The backend contract should be treated as the primary interface for the frontend and RSS generator.
-- When `NOTION_DATABASE_ID` is configured, blog posts are read from a Notion database instead of child pages under `NOTION_PAGE_ID`.
+- When `NOTION_DATABASE_ID` is configured, blog posts are read from a Notion database/data source instead of child pages under `NOTION_PAGE_ID`. This value may be either the database ID or a `collection://...` data source ID.
 - The Notion CMS database uses `Name`, `Published`, `Tag`, `Summary`, `Slug`, and `Feature Image` properties. Only posts with `Published` checked are returned publicly.
 - Database-backed posts expose Markdown body content as `bodyMarkdown`; legacy child-page mode still includes the older nested `body` structure for compatibility.
 - Notion file/media feature images and page covers are registered in Netlify Blobs and served through `netlify/functions/notion-image`.
