@@ -23,13 +23,18 @@ Node/TypeScript backend and Netlify Functions layer for `shaynemcgregor.dev`.
 - `npm run seed:airtable`: seed Airtable records. Approval required.
 - `npm run clean`: remove `dist/`.
 
+For the one-time Notion database button and automation configuration, see [docs/notion-cms-automation.md](docs/notion-cms-automation.md).
+
 ## Local Development Notes
 
 - This repo is clearly Netlify-configured through `netlify.toml`, `netlify/functions/`, and `@netlify/*` dependencies.
 - It is the upstream source hub for the shared blog contract.
 - The backend contract should be treated as the primary interface for the frontend and RSS generator.
 - When `NOTION_DATABASE_ID` is configured, blog posts are read from a Notion database/data source instead of child pages under `NOTION_PAGE_ID`. This value may be either the database ID or a `collection://...` data source ID.
-- The Notion CMS database uses `Name`, `Published`, `Tag`, `Summary`, `Slug`, and `Feature Image` properties. Only posts with `Published` checked are returned publicly.
+- The Notion CMS database uses `Name`, `Published`, `Tag`, `Summary`, `Slug`, `Feature Image`, and `Publication Date` properties. Only posts with `Published` checked are returned publicly.
+- CMS authoring adds `Status`, `CMS Record ID`, `Metadata State`, `Metadata Error`, and a `Generate Metadata` button. `Status` is derived from `Published`; its value is not a second publication control.
+- `cms-generate` receives an authenticated Notion automation webhook, generates initial tag/summary/slug/feature image metadata, and uploads the generated image into Notion's `Feature Image` property. `cms-publish-sync` records the first publication timestamp and refreshes the public JSON/RSS data after any publication toggle.
+- The CMS webhook environment variables are `CMS_WEBHOOK_SECRET`, `OPENAI_API_KEY`, `CMS_TEXT_MODEL`, `CMS_IMAGE_MODEL`, and `CMS_IMAGE_QUALITY`. The default image model is `gpt-image-2` at high quality.
 - Database-backed posts expose Markdown body content as `bodyMarkdown`; legacy child-page mode still includes the older nested `body` structure for compatibility.
 - Notion file/media feature images and page covers are registered in Netlify Blobs and served through `netlify/functions/notion-image`.
 - RSS auto-update is gated by `RSS_AUTO_UPDATE_ON_BLOG_REFRESH`; production activation currently uses `true` for the approved RSS function context.
