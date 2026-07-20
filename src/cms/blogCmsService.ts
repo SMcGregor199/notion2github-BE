@@ -35,6 +35,11 @@ export interface CmsPage {
   id: string;
   created_time: string;
   properties: Record<string, unknown>;
+  parent?: {
+    type?: string;
+    id?: string;
+    data_source_id?: string;
+  };
 }
 
 interface NotionDataSource {
@@ -134,17 +139,21 @@ export function buildFeatureImagePrompt(input: { title: string; summary: string;
 
 export async function initializeCmsMetadata(recordId: number): Promise<{ pageId: string; skipped: boolean }> {
   const page = await findCmsPage(recordId);
+  return initializeCmsMetadataForPage(page);
+}
+
+export async function initializeCmsMetadataForPageId(pageId: string): Promise<{ pageId: string; skipped: boolean }> {
+  const page = await getCmsPage(pageId);
+  if (!(await isCmsPage(page))) {
+    throw new CmsWorkflowError("Page is not in the configured CMS data source.", 404);
+  }
+  return initializeCmsMetadataForPage(page);
+}
+
+async function initializeCmsMetadataForPage(page: CmsPage): Promise<{ pageId: string; skipped: boolean }> {
   const state = getSelectValue(page, CMS_PROPERTIES.metadataState);
   if (state === "Processing") {
     throw new CmsWorkflowError("This post is already being prepared.", 409);
-  }
-
-  const currentFeatureImage = getFileCount(page, CMS_PROPERTIES.featureImage);
-  const currentSummary = getRichTextValue(page, CMS_PROPERTIES.summary);
-  const currentTag = getSelectValue(page, CMS_PROPERTIES.tag);
-  const currentSlug = getRichTextValue(page, CMS_PROPERTIES.slug);
-  if (state === "Ready" && currentFeatureImage && currentSummary && currentTag && currentSlug) {
-    return { pageId: page.id, skipped: true };
   }
 
   await updateCmsPage(page.id, metadataStateProperties("Processing", ""));
@@ -158,7 +167,7 @@ export async function initializeCmsMetadata(recordId: number): Promise<{ pageId:
     const [dataSource, markdown, existingSlugs] = await Promise.all([
       getCmsDataSource(),
       getPageBodyMarkdown(page.id),
-      getExistingSlugs(),
+      getExistingSlugs(page.id),
     ]);
     if (!markdown.trim()) {
       throw new CmsWorkflowError("The post needs article content before metadata can be generated.", 422);
@@ -202,6 +211,38 @@ export async function initializeCmsMetadata(recordId: number): Promise<{ pageId:
 
 export async function syncCmsPublication(recordId: number): Promise<{ pageId: string; published: boolean; publicationDateSet: boolean }> {
   const page = await findCmsPage(recordId);
+  return syncCmsPublicationForPage(page);
+}
+
+export async function processCmsPagePropertyUpdate(
+  pageId: string,
+  updatedPropertyIds: readonly string[],
+): Promise<{ actions: Array<"metadata" | "publication"> }> {
+  const page = await getCmsPage(pageId);
+  if (!(await isCmsPage(page))) {
+    return { actions: [] };
+  }
+
+  const changed = new Set(updatedPropertyIds);
+  const actions: Array<"metadata" | "publication"> = [];
+  if (
+    changed.has(getPropertyId(page, CMS_PROPERTIES.metadataState))
+    && getSelectValue(page, CMS_PROPERTIES.metadataState) === "Queued"
+  ) {
+    await initializeCmsMetadataForPage(page);
+    actions.push("metadata");
+  }
+
+  if (changed.has(getPropertyId(page, CMS_PROPERTIES.published))) {
+    await syncCmsPublicationForPage(page);
+    await refreshPublishedBlogData();
+    actions.push("publication");
+  }
+
+  return { actions };
+}
+
+async function syncCmsPublicationForPage(page: CmsPage): Promise<{ pageId: string; published: boolean; publicationDateSet: boolean }> {
   const published = getCheckboxValue(page, CMS_PROPERTIES.published);
   const publicationDate = getDateValue(page, CMS_PROPERTIES.publicationDate);
   let publicationDateSet = false;
@@ -329,7 +370,7 @@ async function getCmsDataSource(): Promise<NotionDataSource> {
   return response.json() as Promise<NotionDataSource>;
 }
 
-async function getExistingSlugs(): Promise<string[]> {
+async function getExistingSlugs(excludePageId?: string): Promise<string[]> {
   const dataSourceId = await resolveDataSourceId();
   const slugs: string[] = [];
   let cursor: string | null | undefined;
@@ -340,6 +381,7 @@ async function getExistingSlugs(): Promise<string[]> {
     });
     const result = await response.json() as PageQueryResponse;
     for (const page of result.results || []) {
+      if (page.id === excludePageId) continue;
       const slug = getRichTextValue(page, CMS_PROPERTIES.slug);
       if (slug) slugs.push(slug);
     }
@@ -353,6 +395,18 @@ async function updateCmsPage(pageId: string, properties: Record<string, unknown>
     method: "PATCH",
     body: JSON.stringify({ properties }),
   });
+}
+
+async function getCmsPage(pageId: string): Promise<CmsPage> {
+  const response = await notionFetch(`/pages/${pageId}`);
+  return response.json() as Promise<CmsPage>;
+}
+
+async function isCmsPage(page: CmsPage): Promise<boolean> {
+  const dataSourceId = await resolveDataSourceId();
+  const parent = page.parent || {};
+  return parent.data_source_id === dataSourceId
+    || (parent.type === "data_source_id" && parent.id === dataSourceId);
 }
 
 async function resolveDataSourceId(): Promise<string> {
@@ -419,6 +473,10 @@ function richTextProperty(content: string): { rich_text: Array<{ type: "text"; t
 
 function getProperty(page: CmsPage, propertyName: string): Record<string, any> {
   return (page.properties?.[propertyName] || {}) as Record<string, any>;
+}
+
+function getPropertyId(page: CmsPage, propertyName: string): string {
+  return String(getProperty(page, propertyName).id || "");
 }
 
 function getTitleValue(page: CmsPage, propertyName: string): string {
