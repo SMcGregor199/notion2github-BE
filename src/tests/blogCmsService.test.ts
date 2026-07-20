@@ -18,7 +18,7 @@ describe("blog CMS metadata helpers", () => {
 
   it("normalizes preview-card summaries to a single bounded sentence", () => {
     expect(normalizeSummary("  A concise\n\nsummary.  ")).toBe("A concise summary.");
-    expect(normalizeSummary("x".repeat(220))).toHaveLength(180);
+    expect(normalizeSummary("x".repeat(220))).toHaveLength(70);
   });
 
   it("creates deterministic slugs and resolves only real collisions", () => {
@@ -40,6 +40,7 @@ describe("blog CMS metadata helpers", () => {
     });
 
     expect(metadataPrompt).toContain("Engineering, Performance");
+    expect(metadataPrompt).toContain("punchy, accurate share-preview sentence no longer than 70 characters");
     expect(imagePrompt).toContain("spacey hip-hop and cyberpunk editorial art");
     expect(imagePrompt).toContain("Do not render words");
     expect(imagePrompt).toContain("cache node");

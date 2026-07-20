@@ -6,7 +6,7 @@ import { getPageBodyMarkdown } from "../../utils/helper.js";
 const NOTION_API_BASE = "https://api.notion.com/v1";
 const OPENAI_API_BASE = "https://api.openai.com/v1";
 const NOTION_VERSION = "2026-03-11";
-const SUMMARY_MAX_LENGTH = 180;
+const SUMMARY_MAX_LENGTH = 70;
 const BODY_MAX_LENGTH = 30_000;
 const slugify = slugifyModule as unknown as (value: string, options: { lower: boolean; strict: boolean }) => string;
 
@@ -115,7 +115,7 @@ export function buildMetadataPrompt(input: { title: string; markdown: string; ex
   return [
     "You prepare metadata for a personal engineering and technology blog.",
     "Return JSON only with summary, tag, and imageBrief.",
-    `summary must be one accurate editorial sentence no longer than ${SUMMARY_MAX_LENGTH} characters, with no markdown or quotation marks.`,
+    `summary must be one punchy, accurate share-preview sentence no longer than ${SUMMARY_MAX_LENGTH} characters, with no markdown or quotation marks. Lead with the clearest compelling hook, use active language and a concrete insight or benefit, and avoid clickbait.`,
     "tag must be the single best category. Prefer one of the existing tags when it fits. Create a concise new category only when none fit.",
     "imageBrief must describe a single post-specific feature image subject; do not include typography, logos, brand names, or words to render.",
     `Existing tags: ${input.existingTags.join(", ") || "none"}.`,
