@@ -332,8 +332,8 @@ function getFileUrl(page: NotionPage, name: string): string { const file = getPr
 async function newsletterImageUrl(page: NotionPage): Promise<string> {
   const sourceUrl = getFileUrl(page, "Feature Image");
   if (!sourceUrl) return "";
-  const imageId = createStableImageId(page.id, sourceUrl);
-  await registerNotionImageSource(imageId, sourceUrl);
+  const imageId = createStableImageId(page.id, "feature-image");
+  await registerNotionImageSource(imageId, sourceUrl, { kind: "page-file", pageId: page.id, propertyName: "Feature Image" });
   return publicImageUrlForImageId(imageId);
 }
 function webhookEmail(data: Record<string, unknown>): string { const direct = normalizeEmail(data.email); if (direct) return direct; const to = Array.isArray(data.to) ? data.to.find((item) => typeof item === "string") : ""; return normalizeEmail(to); }

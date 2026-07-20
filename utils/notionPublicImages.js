@@ -19,6 +19,20 @@ export function createStableImageId(ownerId, sourceUrl) {
     return `${sanitizeImageId(ownerId)}-${stableHash(sourceUrl)}`;
 }
 
+export function notionImageSourceFingerprint(sourceUrl) {
+    if (typeof sourceUrl !== "string" || !sourceUrl.trim()) {
+        return "";
+    }
+
+    try {
+        const parsed = new URL(sourceUrl);
+        const isSignedUrl = [...parsed.searchParams.keys()].some((key) => key.toLowerCase().startsWith("x-amz-"));
+        return stableHash(isSignedUrl ? `${parsed.origin}${parsed.pathname}` : parsed.toString());
+    } catch {
+        return stableHash(sourceUrl);
+    }
+}
+
 export function imageSourceKey(imageId) {
     return `${IMAGE_SOURCE_PREFIX}/${sanitizeImageId(imageId)}.json`;
 }
@@ -41,24 +55,45 @@ export function publicImageUrlForBlockId(blockId) {
     return `${origin}/.netlify/functions/notion-image?blockId=${encodeURIComponent(blockId)}`;
 }
 
-export async function registerNotionImageSource(imageId, sourceUrl) {
+export async function registerNotionImageSource(imageId, sourceUrl, reference = undefined) {
     if (!imageId || typeof sourceUrl !== "string" || !sourceUrl.trim()) {
-        return;
+        return null;
     }
 
     const store = getStore("content", { consistency: "strong" });
-    await store.setJSON(imageSourceKey(imageId), {
+    const key = imageSourceKey(imageId);
+    const existing = await store.get(key, { type: "json" });
+    const record = {
         sourceUrl,
+        sourceFingerprint: notionImageSourceFingerprint(sourceUrl),
+        reference: reference || existing?.reference || null,
         updatedAt: new Date().toISOString(),
-    });
+    };
+    await store.setJSON(key, record);
+    return record;
 }
 
 export async function readRegisteredNotionImageSource(imageId) {
+    const record = await readRegisteredNotionImage(imageId);
+    return record?.sourceUrl || "";
+}
+
+export async function readRegisteredNotionImage(imageId) {
     if (!imageId) {
-        return "";
+        return null;
     }
 
     const store = getStore("content", { consistency: "strong" });
     const record = await store.get(imageSourceKey(imageId), { type: "json" });
-    return typeof record?.sourceUrl === "string" ? record.sourceUrl : "";
+    if (typeof record?.sourceUrl !== "string") {
+        return null;
+    }
+
+    return {
+        sourceUrl: record.sourceUrl,
+        sourceFingerprint: typeof record.sourceFingerprint === "string"
+            ? record.sourceFingerprint
+            : notionImageSourceFingerprint(record.sourceUrl),
+        reference: record.reference && typeof record.reference === "object" ? record.reference : null,
+    };
 }

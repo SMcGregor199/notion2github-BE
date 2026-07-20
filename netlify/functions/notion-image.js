@@ -1,10 +1,9 @@
-import { getStore } from "@netlify/blobs";
 import { Client } from "@notionhq/client";
 import {config} from "dotenv";
 config();
-import sharp from "sharp";
 import { getNotionImageUrl, getNotionImageUrlFromPageContent } from "../../utils/notionImage.js";
-import { readRegisteredNotionImageSource } from "../../utils/notionPublicImages.js";
+import { readRegisteredNotionImage, registerNotionImageSource } from "../../utils/notionPublicImages.js";
+import { cacheNotionImage, readCachedNotionImage } from "../../utils/notionImageCache.js";
 const NOTION_API_KEY = process.env.NOTION_API_KEY;
 async function getPageContentById(pageId){
     try{
@@ -19,9 +18,6 @@ async function getPageContentById(pageId){
 }
 
 
-const store  = getStore("images", { consistency: "strong" });
-
-
 //initilizing the Notion client
 const notion = new Client({
     auth: NOTION_API_KEY,
@@ -34,25 +30,14 @@ export default async (request,context)=> {
         const imageId = url.searchParams.get("imageId");
     
         if (!blockId && !imageId) return new Response("Missing blockId or imageId", {status:400}); 
-        // If we have the raw binary image data cached, return it
         const cacheKey = imageId || blockId;
-        const cached = await store.get(cacheKey, { type: "arrayBuffer" });
-        const meta   = await store.getMetadata(cacheKey);
+        let registeredImage = imageId ? await readRegisteredNotionImage(imageId) : null;
+        const cached = await readCachedNotionImage(cacheKey, registeredImage?.sourceFingerprint || "");
         if (cached) {
-            return new Response(cached, {
-                status: 200,
-                headers: {
-                "Content-Type": meta?.metadata?.contentType || "image/webp",
-                "Cache-Control": "public, max-age=31536000, immutable",
-                "Access-Control-Allow-Origin": "*"
-                }
-            });
+            return imageResponse(cached);
         }
 
-        // If we don't have the image cached, fetch it from Notion and cache it
-        const imageFileUrl = imageId
-            ? await readRegisteredNotionImageSource(imageId)
-            : await resolveLegacyNotionImageUrl(blockId);
+        let imageFileUrl = registeredImage?.sourceUrl || (blockId ? await resolveLegacyNotionImageUrl(blockId) : "");
 
         if (!imageFileUrl) {
             return new Response("No image found", {
@@ -64,31 +49,31 @@ export default async (request,context)=> {
             });
         }
 
-        const res = await fetch(imageFileUrl);
-
-        if (!res.ok) {
-            return new Response(`Failed to fetch source image: ${res.status}`, {status: 502, headers: {"Content-Type": "text/plain", "Access-Control-Allow-Origin": "*" }});
-        }
-        
-        //getting the raw data from the response (binary data)
-        const arrayBuf = await res.arrayBuffer();
-
-        //turning it into a Node Buffer(something we can actually use and perform operations on)
-        const buf = Buffer.from(arrayBuf);
-
-        const optimizedBuf = await sharp(buf)
-        .toFormat("webp", { quality: 80 })
-        .toBuffer();
-
-        await store.set(cacheKey, optimizedBuf, { metadata: { contentType: "image/webp" } });
-            return new Response(optimizedBuf, {
-                status: 200,
-                headers: {
-                    "Content-Type": "image/webp",
-                    "Cache-Control": "public, max-age=31536000, immutable",
-                    "Access-Control-Allow-Origin": "*"
+        try {
+            return imageResponse(await cacheNotionImage(cacheKey, imageFileUrl, registeredImage?.sourceFingerprint || ""));
+        } catch (firstError) {
+            if (registeredImage?.reference) {
+                try {
+                    const refreshedUrl = await resolveRegisteredNotionImageUrl(registeredImage.reference);
+                    if (refreshedUrl) {
+                        registeredImage = await registerNotionImageSource(imageId, refreshedUrl, registeredImage.reference);
+                        try {
+                            return imageResponse(await cacheNotionImage(cacheKey, refreshedUrl, registeredImage?.sourceFingerprint || ""));
+                        } catch {
+                            // A last-known-good image is preferable to a broken image while the source recovers.
+                        }
+                    }
+                } catch {
+                    // The stale Blob fallback below remains available if Notion is temporarily unavailable.
                 }
-            });
+            }
+
+            const stale = await readCachedNotionImage(cacheKey, registeredImage?.sourceFingerprint || "", { allowStale: true });
+            if (stale) {
+                return imageResponse(stale);
+            }
+            throw firstError;
+        }
     
     }catch(err){
         console.log(err);
@@ -111,4 +96,50 @@ async function resolveLegacyNotionImageUrl(blockId) {
 
     const pageContent = await getPageContentById(blockId);
     return getNotionImageUrlFromPageContent(pageContent);
+}
+
+async function resolveRegisteredNotionImageUrl(reference) {
+    if (reference.kind === "block-image" && reference.blockId) {
+        const block = await notion.blocks.retrieve({ block_id: reference.blockId });
+        return getNotionImageUrl(block);
+    }
+
+    if (!reference.pageId) {
+        return "";
+    }
+
+    const page = await notion.pages.retrieve({ page_id: reference.pageId });
+    if (reference.kind === "page-cover") {
+        return getNotionFileUrl(page.cover);
+    }
+    if (reference.kind === "page-file" && reference.propertyName) {
+        const property = page.properties?.[reference.propertyName];
+        return getNotionFileUrl(property?.files?.[0]);
+    }
+
+    return "";
+}
+
+function getNotionFileUrl(fileValue) {
+    if (!fileValue || typeof fileValue !== "object") {
+        return "";
+    }
+    if (fileValue.type === "external") {
+        return fileValue.external?.url || "";
+    }
+    if (fileValue.type === "file") {
+        return fileValue.file?.url || "";
+    }
+    return fileValue.external?.url || fileValue.file?.url || "";
+}
+
+function imageResponse(image) {
+    return new Response(image.body, {
+        status: 200,
+        headers: {
+            "Content-Type": image.contentType,
+            "Cache-Control": image.stale ? "public, max-age=300" : "public, max-age=31536000, immutable",
+            "Access-Control-Allow-Origin": "*",
+        },
+    });
 }

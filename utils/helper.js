@@ -10,6 +10,7 @@ import {
     publicImageUrlForImageId,
     registerNotionImageSource,
 } from "./notionPublicImages.js";
+import { prewarmNotionImage } from "./notionImageCache.js";
 
 const notion = new Client({
     auth: process.env.NOTION_API_KEY,
@@ -207,8 +208,10 @@ async function resolveFeaturedImageUrl(page, pageContent) {
     const sourceUrl = propertySource || coverSource;
 
     if (sourceUrl) {
-        const imageId = createStableImageId(page.id, sourceUrl);
-        await registerNotionImageSource(imageId, sourceUrl);
+        const imageId = createStableImageId(page.id, propertySource ? "feature-image" : "page-cover");
+        await registerAndPrewarmNotionImage(imageId, sourceUrl, propertySource
+            ? { kind: "page-file", pageId: page.id, propertyName: DATABASE_PROPERTIES.featureImage }
+            : { kind: "page-cover", pageId: page.id });
         return { thumbnail: publicImageUrlForImageId(imageId), legacyImageBlockId: "" };
     }
 
@@ -298,14 +301,28 @@ async function getPageBodyMarkdown(pageId, pageContent, options = {}) {
             return "";
         }
 
-        const imageId = createStableImageId(block.id || pageId, sourceUrl);
-        await registerNotionImageSource(imageId, sourceUrl);
+        const imageId = createStableImageId(block.id || pageId, "inline-image");
+        await registerAndPrewarmNotionImage(imageId, sourceUrl, { kind: "block-image", blockId: block.id || pageId });
         return `![${escapeMarkdownAlt(caption)}](${publicImageUrlForImageId(imageId)})`;
     });
 
     const markdownBlocks = await n2m.blocksToMarkdown(bodyBlocks);
     const markdownString = n2m.toMarkdownString(markdownBlocks);
     return (markdownString.parent || "").trim();
+}
+
+async function registerAndPrewarmNotionImage(imageId, sourceUrl, reference) {
+    const record = await registerNotionImageSource(imageId, sourceUrl, reference);
+    if (!record) {
+        return;
+    }
+
+    try {
+        await prewarmNotionImage(imageId, record.sourceUrl, record.sourceFingerprint);
+    } catch (error) {
+        // The public image function can re-fetch this source later. Do not block a post refresh on one image host.
+        console.warn("Unable to prewarm Notion image", { imageId, message: error?.message || String(error) });
+    }
 }
 
 function serializeNotionBodyBlocks(blocks = []) {
