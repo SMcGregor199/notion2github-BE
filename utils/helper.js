@@ -87,7 +87,12 @@ async function getDatabasePosts(databaseId) {
             const summary = getRichTextProperty(page, DATABASE_PROPERTIES.summary) || legacySummary;
             const link = normalizeSlug(getRichTextProperty(page, DATABASE_PROPERTIES.slug)) || slugify(title, { lower: true });
             const { thumbnail, legacyImageBlockId } = await resolveFeaturedImageUrl(page, pageContent);
-            const bodyMarkdown = await getPageBodyMarkdown(page.id, pageContent, { excludeBlockId: legacyImageBlockId });
+            const bodyMarkdown = await getPageBodyMarkdown(page.id, pageContent, {
+                excludeBlockId: legacyImageBlockId,
+                // Database posts store their summary and tag in properties, not body blocks.
+                // Keep an author's first heading (and last to-do) intact.
+                stripLegacyMetadata: false,
+            });
             const publishedDate = getDateProperty(page, DATABASE_PROPERTIES.publicationDate) || page.created_time || "";
 
             return {
@@ -277,7 +282,9 @@ async function getPageBodyContent(pageId, pageContent) {
 
 async function getPageBodyMarkdown(pageId, pageContent, options = {}) {
     const content = pageContent || await getPageContentById(pageId);
-    const bodyBlocks = getBodyBlocksFromPageContent(content)
+    const bodyBlocks = getBodyBlocksFromPageContent(content, {
+        stripLegacyMetadata: options.stripLegacyMetadata !== false,
+    })
         .filter((block) => !options.excludeBlockId || block?.id !== options.excludeBlockId);
     const n2m = new NotionToMarkdown({
         notionClient: notion,
@@ -378,12 +385,13 @@ function serializeNotionBlock(block) {
     return { type: "unsupported", originalType: type, text: fallbackText };
 }
 
-function getBodyBlocksFromPageContent(pageContent) {
+function getBodyBlocksFromPageContent(pageContent, options = {}) {
+    const stripLegacyMetadata = options.stripLegacyMetadata !== false;
     const blocks = Array.isArray(pageContent?.results) ? [...pageContent.results] : [];
-    if (isHistoricalSummaryBlock(blocks[0])) {
+    if (stripLegacyMetadata && isHistoricalSummaryBlock(blocks[0])) {
         blocks.shift();
     }
-    if (isHistoricalTagBlock(blocks[blocks.length - 1])) {
+    if (stripLegacyMetadata && isHistoricalTagBlock(blocks[blocks.length - 1])) {
         blocks.pop();
     }
     return blocks;

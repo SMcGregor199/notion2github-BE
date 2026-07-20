@@ -129,6 +129,24 @@ describe("Notion rich text serialization", () => {
     ]);
   });
 
+  it("keeps first headings for database posts that use properties for metadata", () => {
+    const firstHeading = {
+      type: "heading_3",
+      heading_3: { rich_text: [{ plain_text: "The First Point of Friction" }] },
+    };
+    const blocks = getBodyBlocksFromPageContent({
+      results: [
+        firstHeading,
+        { type: "paragraph", paragraph: { rich_text: [{ plain_text: "Actual body." }] } },
+      ],
+    }, { stripLegacyMetadata: false });
+
+    expect(blocks).toEqual([
+      firstHeading,
+      { type: "paragraph", paragraph: { rich_text: [{ plain_text: "Actual body." }] } },
+    ]);
+  });
+
   it("treats only checked Notion database pages as published", () => {
     expect(isPublishedDatabasePage({
       properties: {
