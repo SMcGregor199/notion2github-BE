@@ -8,6 +8,7 @@ The CMS uses Notion as the authoring surface and the backend Netlify site as the
 2. Click `Generate Metadata`.
 3. Wait for `Metadata State` to become `Ready`, then review the generated tag, summary, slug, and feature image.
 4. Check `Published` when the post is ready. Notion immediately calculates `Status` as `Live`; the connection webhook assigns `Publication Date` once and refreshes public blog/RSS data.
+5. The first publish creates a `Newsletter State` of `Draft`. Write and review the `Newsletter Intro`, publish the LinkedIn discussion post and paste its URL, then use `Send Newsletter` to set the state to `Queued`. The connection webhook is the only send trigger; publishing never sends email.
 
 ## One-Time Notion Setup
 
@@ -22,6 +23,21 @@ Create a default database template named `New Blog Draft` with `Published` unche
 3. Save. Do not add a **Send webhook** action or an automation: Notion's connection webhook receives the property change automatically.
 
 Clicking the button again regenerates and replaces the tag, summary, slug, and feature image. When the title has not changed, the slug remains the same.
+
+### Newsletter Properties and Send Button
+
+Add these properties to `Blog CMS Posts` before deploying the newsletter code:
+
+- `Newsletter Intro` — **Text**
+- `LinkedIn Discussion URL` — **URL**
+- `Newsletter State` — **Select** with `Draft`, `Queued`, `Sending`, `Sent`, and `Failed`
+- `Newsletter Sent At` — **Date**
+- `Newsletter Error` — **Text**
+- `Newsletter Broadcast ID` — **Text**
+
+Add a `Send Newsletter` **Button** that edits **This page** and sets `Newsletter State` to `Queued`. It must not call the backend directly and should not modify any other newsletter fields. The Notion connection webhook sees that property change, checks the draft, creates one Resend broadcast, sends it, and writes the broadcast ID and `Sent` state back to the row. A post with a broadcast ID or sent timestamp is never sent again, including after publish toggles or a repeated button click.
+
+The newsletter requires a non-empty intro and a valid LinkedIn discussion URL. If either is missing, the row moves to `Failed` with a reviewable error; correct it, then set the state to `Queued` again.
 
 ### Free-plan Connection Webhook
 
@@ -59,6 +75,27 @@ Set these private variables on the backend Netlify site before enabling the Noti
 - `NOTION_WEBHOOK_VERIFICATION_TOKEN`: required for the free-plan connection webhook; copy the one-time token from the verification request into this private variable before activating the subscription.
 
 `NOTION_API_KEY` must have access to `Blog CMS Posts`; `NOTION_DATABASE_ID` must remain set to the CMS data-source ID.
+
+## Newsletter Setup and Activation
+
+This is a separate production-activation checklist. Do not enable the button, form, or Resend webhook until all steps are complete.
+
+1. Create a private Notion data source named `Blog Subscribers`, share it only with the existing Notion integration, and set `NOTION_SUBSCRIBERS_DATABASE_ID` to its database or data-source ID. Add the following exact properties:
+   - `First Name` (**Title**), `Last Name` (**Text**), `Email` (**Email**), `Why Subscribe` (**Text**)
+   - `Status` (**Select**): `Pending`, `Subscribed`, `Unsubscribed`, `Bounced`
+   - `Consent At` (**Date**), `Confirmed At` (**Date**), `Confirmation Token Hash` (**Text**), `Confirmation Token Expires At` (**Date**), `Resend Contact ID` (**Text**), `Source` (**Select**, including `Website`)
+2. Verify `shaynemcgregor.dev` in Resend and publish the SPF/DKIM records Resend gives you through Netlify DNS. Do not activate sending until Resend reports the domain verified. Send from `Shayne McGregor <updates@shaynemcgregor.dev>`.
+3. Configure a dedicated inbound-mail forwarding provider in Netlify DNS so replies to `updates@shaynemcgregor.dev` forward to the existing Gmail inbox. This project intentionally has no inbound-email handler.
+4. In Resend, create a `Blog Updates` segment and a matching topic. Keep their IDs private and use the segment for broadcasts.
+5. Set these private backend Netlify variables (without committing values):
+   - `NOTION_SUBSCRIBERS_DATABASE_ID`, `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET`
+   - `RESEND_FROM_EMAIL` (`Shayne McGregor <updates@shaynemcgregor.dev>`), `RESEND_REPLY_TO` (`updates@shaynemcgregor.dev`)
+   - `RESEND_BLOG_UPDATES_SEGMENT_ID`, `RESEND_BLOG_UPDATES_TOPIC_ID`
+   - `NEWSLETTER_CONFIRMATION_BASE_URL` (the deployed `newsletter-confirm` function URL), `NEWSLETTER_SITE_URL` (`https://shaynemcgregor.dev`), `BACKEND_ORIGIN` (the deployed backend origin, required for the feature image URL), and optionally `NEWSLETTER_ALLOWED_ORIGIN`
+6. Register `https://shaynemcgregordev-be.netlify.app/.netlify/functions/resend-webhook` in Resend. Subscribe it to contact updates and `email.bounced`. The function verifies Resend's Svix signature before changing Notion; an unsubscribe becomes `Unsubscribed`, and a permanent bounce becomes `Bounced`.
+7. Run the end-to-end checks with a test address: form validation, a pending Notion record, a valid confirmation, expired/replayed confirmation links, Resend contact/segment/topic sync, an unsubscribe webhook, a permanent-bounce webhook, first-publish draft creation, missing-draft send failure, and one successful newsletter broadcast.
+
+The new endpoint set is `newsletter-subscribe`, `newsletter-confirm`, `resend-webhook`, and `newsletter-send`. The subscription and confirmation endpoints are public by design but validate inputs and use non-revealing responses; Resend webhooks require their signed request; the direct send endpoint requires `CMS_WEBHOOK_SECRET`. The public frontend never receives a provider credential.
 
 ## Failure Recovery
 

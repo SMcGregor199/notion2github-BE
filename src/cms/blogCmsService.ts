@@ -2,6 +2,7 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import slugifyModule from "slugify";
 // @ts-expect-error This established runtime utility is JavaScript-only.
 import { getPageBodyMarkdown } from "../../utils/helper.js";
+import { NEWSLETTER_PROPERTIES, sendNewsletterForPageId } from "../newsletter/newsletterService.js";
 
 const NOTION_API_BASE = "https://api.notion.com/v1";
 const OPENAI_API_BASE = "https://api.openai.com/v1";
@@ -21,6 +22,12 @@ export const CMS_PROPERTIES = {
   recordId: "CMS Record ID",
   metadataState: "Metadata State",
   metadataError: "Metadata Error",
+  newsletterIntro: NEWSLETTER_PROPERTIES.intro,
+  linkedinDiscussionUrl: NEWSLETTER_PROPERTIES.linkedinUrl,
+  newsletterState: NEWSLETTER_PROPERTIES.state,
+  newsletterSentAt: NEWSLETTER_PROPERTIES.sentAt,
+  newsletterError: NEWSLETTER_PROPERTIES.error,
+  newsletterBroadcastId: NEWSLETTER_PROPERTIES.broadcastId,
 } as const;
 
 export type MetadataState = "New" | "Queued" | "Processing" | "Ready" | "Failed";
@@ -223,14 +230,14 @@ export async function syncCmsPublication(recordId: number): Promise<{ pageId: st
 export async function processCmsPagePropertyUpdate(
   pageId: string,
   updatedPropertyIds: readonly string[],
-): Promise<{ actions: Array<"metadata" | "publication"> }> {
+): Promise<{ actions: Array<"metadata" | "publication" | "newsletter"> }> {
   const page = await getCmsPage(pageId);
   if (!(await isCmsPage(page))) {
     return { actions: [] };
   }
 
   const changed = new Set(updatedPropertyIds);
-  const actions: Array<"metadata" | "publication"> = [];
+  const actions: Array<"metadata" | "publication" | "newsletter"> = [];
   if (
     changed.has(getPropertyId(page, CMS_PROPERTIES.metadataState))
     && getSelectValue(page, CMS_PROPERTIES.metadataState) === "Queued"
@@ -245,6 +252,14 @@ export async function processCmsPagePropertyUpdate(
     actions.push("publication");
   }
 
+  if (
+    changed.has(getPropertyId(page, CMS_PROPERTIES.newsletterState))
+    && getSelectValue(page, CMS_PROPERTIES.newsletterState) === "Queued"
+  ) {
+    await sendNewsletterForPageId(page.id);
+    actions.push("newsletter");
+  }
+
   return { actions };
 }
 
@@ -257,6 +272,9 @@ async function syncCmsPublicationForPage(page: CmsPage): Promise<{ pageId: strin
   if (published && !publicationDate) {
     properties[CMS_PROPERTIES.publicationDate] = { date: { start: new Date().toISOString() } };
     publicationDateSet = true;
+  }
+  if (published && !getSelectValue(page, CMS_PROPERTIES.newsletterState)) {
+    properties[CMS_PROPERTIES.newsletterState] = { select: { name: "Draft" } };
   }
   if (Object.keys(properties).length > 0) {
     await updateCmsPage(page.id, properties);
