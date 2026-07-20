@@ -38,6 +38,10 @@ export async function handleCmsNotionWebhook(request: Request): Promise<Response
   }
 
   try {
+    console.info("Notion CMS property update accepted", {
+      pageId: update.pageId,
+      updatedPropertyIds: update.updatedPropertyIds,
+    });
     return Response.json(await processCmsPagePropertyUpdate(update.pageId, update.updatedPropertyIds));
   } catch (error) {
     console.error("Notion CMS webhook failed:", error);

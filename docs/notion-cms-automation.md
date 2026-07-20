@@ -34,7 +34,7 @@ Clicking the button again regenerates and replaces the tag, summary, slug, and f
 4. In the backend site's Netlify function logs, copy the received verification token. Add it as the private `NOTION_WEBHOOK_VERIFICATION_TOKEN` environment variable, redeploy the backend, and paste that same token into Notion's verification dialog.
 5. Confirm the subscription is active. Notion signs later events with this token; the backend rejects unsigned or invalid events.
 
-The webhook reacts only when `Metadata State` changes to `Queued` or `Published` changes. Changing `Published` to either checked or unchecked runs the existing publication sync and refreshes public blog/RSS data.
+The webhook runs in Netlify background mode, so Notion receives an immediate acknowledgement while long-running image generation and upload can continue safely. The webhook reacts only when `Metadata State` changes to `Queued` or `Published` changes. Changing `Published` to either checked or unchecked runs the existing publication sync and refreshes public blog/RSS data.
 
 ### Optional Paid-plan Automations
 

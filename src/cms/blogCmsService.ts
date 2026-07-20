@@ -157,6 +157,7 @@ async function initializeCmsMetadataForPage(page: CmsPage): Promise<{ pageId: st
   }
 
   await updateCmsPage(page.id, metadataStateProperties("Processing", ""));
+  console.info("CMS metadata generation started", { pageId: page.id });
 
   try {
     const title = getTitleValue(page, CMS_PROPERTIES.title);
@@ -175,6 +176,7 @@ async function initializeCmsMetadataForPage(page: CmsPage): Promise<{ pageId: st
 
     const existingTags = getSelectOptions(dataSource, CMS_PROPERTIES.tag);
     const metadata = await generateMetadata(title, markdown, existingTags);
+    console.info("CMS metadata text generated", { pageId: page.id });
     const summary = normalizeSummary(metadata.summary);
     const tag = normalizeTag(metadata.tag);
     if (!summary || !tag || !metadata.imageBrief.trim()) {
@@ -187,7 +189,9 @@ async function initializeCmsMetadataForPage(page: CmsPage): Promise<{ pageId: st
       summary,
       imageBrief: metadata.imageBrief,
     }));
+    console.info("CMS feature image generated", { pageId: page.id, bytes: imageBytes.byteLength });
     const fileUploadId = await uploadImageToNotion(imageBytes, `${slug}.webp`);
+    console.info("CMS feature image uploaded to Notion", { pageId: page.id, fileUploadId });
 
     await updateCmsPage(page.id, {
       [CMS_PROPERTIES.summary]: richTextProperty(summary),
@@ -198,10 +202,12 @@ async function initializeCmsMetadataForPage(page: CmsPage): Promise<{ pageId: st
       },
       ...metadataStateProperties("Ready", ""),
     });
+    console.info("CMS metadata generation completed", { pageId: page.id });
 
     return { pageId: page.id, skipped: false };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown CMS metadata error.";
+    console.error("CMS metadata generation failed", { pageId: page.id, message });
     await updateCmsPage(page.id, metadataStateProperties("Failed", message)).catch((updateError) => {
       console.error("Unable to record CMS metadata failure:", updateError);
     });
