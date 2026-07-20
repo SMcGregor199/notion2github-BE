@@ -19,9 +19,14 @@ export function isNotionWebhookSignatureValid(
 ): boolean {
   if (!signature || !verificationToken) return false;
   const expected = `sha256=${createHmac("sha256", verificationToken).update(rawBody).digest("hex")}`;
+  return isSharedSecretValid(signature, expected);
+}
+
+export function isSharedSecretValid(provided: string | null, expected: string | undefined): boolean {
+  if (!provided || !expected) return false;
   const expectedBuffer = Buffer.from(expected);
-  const receivedBuffer = Buffer.from(signature);
-  return expectedBuffer.length === receivedBuffer.length && timingSafeEqual(expectedBuffer, receivedBuffer);
+  const providedBuffer = Buffer.from(provided);
+  return expectedBuffer.length === providedBuffer.length && timingSafeEqual(expectedBuffer, providedBuffer);
 }
 
 export function getPagePropertyUpdate(payload: unknown): { pageId: string; updatedPropertyIds: string[] } | null {
