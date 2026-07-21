@@ -86,7 +86,7 @@ This is a separate production-activation checklist. Do not enable the button, fo
    - `Consent At` (**Date**), `Confirmed At` (**Date**), `Confirmation Token Hash` (**Text**), `Confirmation Token Expires At` (**Date**), `Resend Contact ID` (**Text**), `Source` (**Select**, including `Website`)
 2. Verify `shaynemcgregor.dev` in Resend and publish the SPF/DKIM records Resend gives you through Netlify DNS. Do not activate sending until Resend reports the domain verified. Send from `Shayne McGregor <updates@shaynemcgregor.dev>`.
 3. Configure a dedicated inbound-mail forwarding provider in Netlify DNS so replies to `updates@shaynemcgregor.dev` forward to the existing Gmail inbox. This project intentionally has no inbound-email handler.
-4. In Resend, create a `Blog Updates` segment and a matching topic. Keep their IDs private and use the segment for broadcasts.
+4. In Resend, create a `Notes from Shayne` segment and matching topic. Keep their IDs private and use the segment for broadcasts.
 5. Set these private backend Netlify variables (without committing values):
    - `NOTION_SUBSCRIBERS_DATABASE_ID`, `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET`
    - `RESEND_FROM_EMAIL` (`Shayne McGregor <updates@shaynemcgregor.dev>`), `RESEND_REPLY_TO` (`updates@shaynemcgregor.dev`)
