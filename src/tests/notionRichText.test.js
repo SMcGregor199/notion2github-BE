@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   getBodyBlocksFromPageContent,
   getDateProperty,
+  getLinkedInDiscussionUrlFromPage,
+  getValidLinkedInDiscussionUrl,
   getPageBodyMarkdown,
   isPublishedDatabasePage,
   serializeNotionBodyBlocks,
@@ -174,6 +176,30 @@ describe("Notion rich text serialization", () => {
     }, "Publication Date")).toBe("2026-01-10T13:58:01.000Z");
 
     expect(getDateProperty({ properties: {} }, "Publication Date")).toBe("");
+  });
+
+  it("accepts only HTTPS LinkedIn discussion URLs for public post data", () => {
+    expect(getValidLinkedInDiscussionUrl(" https://www.linkedin.com/posts/example_123 ")).toBe(
+      "https://www.linkedin.com/posts/example_123",
+    );
+    expect(getValidLinkedInDiscussionUrl("http://www.linkedin.com/posts/example")).toBe("");
+    expect(getValidLinkedInDiscussionUrl("https://linkedin.example.com/posts/example")).toBe("");
+    expect(getValidLinkedInDiscussionUrl("https://www.linkedin.com@evil.example/posts/example")).toBe("");
+    expect(getValidLinkedInDiscussionUrl("")).toBe("");
+  });
+
+  it("extracts a valid LinkedIn discussion URL and omits missing or invalid Notion properties", () => {
+    expect(getLinkedInDiscussionUrlFromPage({
+      properties: {
+        "LinkedIn Discussion URL": { type: "url", url: "https://www.linkedin.com/posts/example_123" },
+      },
+    })).toBe("https://www.linkedin.com/posts/example_123");
+    expect(getLinkedInDiscussionUrlFromPage({ properties: {} })).toBe("");
+    expect(getLinkedInDiscussionUrlFromPage({
+      properties: {
+        "LinkedIn Discussion URL": { type: "url", url: "https://example.com/not-linkedin" },
+      },
+    })).toBe("");
   });
 
   it("can omit a legacy image block from Markdown when it is promoted to the featured image", async () => {

@@ -24,6 +24,7 @@ const DATABASE_PROPERTIES = {
     slug: "Slug",
     featureImage: "Feature Image",
     publicationDate: "Publication Date",
+    linkedinDiscussionUrl: "LinkedIn Discussion URL",
 };
 
 async function getChildPages(pageId) {
@@ -95,6 +96,7 @@ async function getDatabasePosts(databaseId) {
                 stripLegacyMetadata: false,
             });
             const publishedDate = getDateProperty(page, DATABASE_PROPERTIES.publicationDate) || page.created_time || "";
+            const linkedinDiscussionUrl = getLinkedInDiscussionUrlFromPage(page);
 
             return {
                 id: page.id,
@@ -106,6 +108,7 @@ async function getDatabasePosts(databaseId) {
                 bodyMarkdown,
                 publishedDate,
                 updatedDate: page.last_edited_time || "",
+                ...(linkedinDiscussionUrl ? { linkedinDiscussionUrl } : {}),
             };
         })
     );
@@ -174,6 +177,30 @@ function getRichTextProperty(page, propertyName) {
     }
 
     return plainTextFromRichText(property.rich_text || []);
+}
+
+function getUrlProperty(page, propertyName) {
+    const property = page?.properties?.[propertyName];
+    return property?.type === "url" && typeof property.url === "string" ? property.url.trim() : "";
+}
+
+function getValidLinkedInDiscussionUrl(value) {
+    if (typeof value !== "string" || !value.trim()) {
+        return "";
+    }
+
+    try {
+        const url = new URL(value.trim());
+        const hostname = url.hostname.toLowerCase();
+        const isLinkedInHost = hostname === "linkedin.com" || hostname.endsWith(".linkedin.com");
+        return url.protocol === "https:" && isLinkedInHost && !url.username && !url.password ? url.href : "";
+    } catch {
+        return "";
+    }
+}
+
+function getLinkedInDiscussionUrlFromPage(page) {
+    return getValidLinkedInDiscussionUrl(getUrlProperty(page, DATABASE_PROPERTIES.linkedinDiscussionUrl));
 }
 
 function getDateProperty(page, propertyName) {
@@ -535,5 +562,7 @@ export {
     getBodyBlocksFromPageContent,
     getPageBodyMarkdown,
     getDateProperty,
+    getLinkedInDiscussionUrlFromPage,
+    getValidLinkedInDiscussionUrl,
     isPublishedDatabasePage,
 };

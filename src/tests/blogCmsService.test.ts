@@ -1,12 +1,31 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+const mockRefreshPublishedBlogData = vi.hoisted(() => vi.fn());
+
+vi.mock("../../utils/fetchAndStoreLatestData.js", () => ({
+  default: mockRefreshPublishedBlogData,
+}));
+
 import {
   buildFeatureImagePrompt,
   buildMetadataPrompt,
   chooseUniqueSlug,
   extractCmsRecordId,
   normalizeSummary,
+  processCmsPagePropertyUpdate,
   slugForTitle,
 } from "../cms/blogCmsService.js";
+
+const originalFetch = globalThis.fetch;
+const originalNotionDatabaseId = process.env.NOTION_DATABASE_ID;
+const originalNotionApiKey = process.env.NOTION_API_KEY;
+
+afterEach(() => {
+  globalThis.fetch = originalFetch;
+  process.env.NOTION_DATABASE_ID = originalNotionDatabaseId;
+  process.env.NOTION_API_KEY = originalNotionApiKey;
+  mockRefreshPublishedBlogData.mockReset();
+});
 
 describe("blog CMS metadata helpers", () => {
   it("extracts the record ID from direct and Notion property webhook payloads", () => {
@@ -44,5 +63,24 @@ describe("blog CMS metadata helpers", () => {
     expect(imagePrompt).toContain("spacey hip-hop and cyberpunk editorial art");
     expect(imagePrompt).toContain("Do not render words");
     expect(imagePrompt).toContain("cache node");
+  });
+
+  it("refreshes public blog data when a published post receives a LinkedIn discussion URL", async () => {
+    process.env.NOTION_DATABASE_ID = "cms-data-source";
+    process.env.NOTION_API_KEY = "test-notion-key";
+    const page = {
+      id: "page-123",
+      parent: { type: "data_source_id", id: "cms-data-source" },
+      properties: {
+        Published: { id: "published-property", checkbox: true },
+        "LinkedIn Discussion URL": { id: "linkedin-property", url: "https://www.linkedin.com/posts/example" },
+      },
+    };
+    globalThis.fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify(page), { status: 200 }));
+
+    await expect(processCmsPagePropertyUpdate("page-123", ["linkedin-property"]))
+      .resolves.toEqual({ actions: ["publicData"] });
+
+    expect(mockRefreshPublishedBlogData).toHaveBeenCalledOnce();
   });
 });

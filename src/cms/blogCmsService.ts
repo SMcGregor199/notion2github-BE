@@ -230,14 +230,14 @@ export async function syncCmsPublication(recordId: number): Promise<{ pageId: st
 export async function processCmsPagePropertyUpdate(
   pageId: string,
   updatedPropertyIds: readonly string[],
-): Promise<{ actions: Array<"metadata" | "publication" | "newsletter"> }> {
+): Promise<{ actions: Array<"metadata" | "publication" | "publicData" | "newsletter"> }> {
   const page = await getCmsPage(pageId);
   if (!(await isCmsPage(page))) {
     return { actions: [] };
   }
 
   const changed = new Set(updatedPropertyIds);
-  const actions: Array<"metadata" | "publication" | "newsletter"> = [];
+  const actions: Array<"metadata" | "publication" | "publicData" | "newsletter"> = [];
   if (
     changed.has(getPropertyId(page, CMS_PROPERTIES.metadataState))
     && getSelectValue(page, CMS_PROPERTIES.metadataState) === "Queued"
@@ -250,6 +250,15 @@ export async function processCmsPagePropertyUpdate(
     await syncCmsPublicationForPage(page);
     await refreshPublishedBlogData();
     actions.push("publication");
+  }
+
+  if (
+    changed.has(getPropertyId(page, CMS_PROPERTIES.linkedinDiscussionUrl))
+    && !changed.has(getPropertyId(page, CMS_PROPERTIES.published))
+    && getCheckboxValue(page, CMS_PROPERTIES.published)
+  ) {
+    await refreshPublishedBlogData();
+    actions.push("publicData");
   }
 
   if (
