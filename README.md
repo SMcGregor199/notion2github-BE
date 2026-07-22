@@ -11,6 +11,7 @@ Node/TypeScript backend and Netlify Functions layer for `shaynemcgregor.dev`.
 - Provides an Airtable seed flow for blog reaction records.
 - Provides an RSS auto-update path for refreshed blog data when production RSS env configuration enables it.
 - Provides a deployed RSS feed function that serves the configured generated RSS Blob.
+- Provides a sitemap function that reads the current published-post Blob manifest without refreshing content.
 
 ## Commands
 
@@ -44,6 +45,7 @@ For the one-time Notion database button and automation configuration, see [docs/
 - The recommended RSS output target names are store `content`, RSS key `rss.xml`, and marker key `content/rss-manifest.json`.
 - `netlify/functions/rss-feed.ts` serves the configured RSS Blob with `application/rss+xml; charset=utf-8`.
 - Public `/rss.xml` is routed from the frontend site to the generated backend feed after the approved production activation.
+- `netlify/functions/sitemap-posts.ts` serves current published post URLs from `content/manifest.json`; the frontend proxies public `/sitemap-posts.xml` to it. Notion publications therefore appear in the post sitemap after the normal content refresh, without a frontend deployment.
 
 ## Artifact And Generated File Cautions
 
