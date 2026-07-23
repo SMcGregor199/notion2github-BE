@@ -40,14 +40,18 @@ export function getPagePropertyUpdate(payload: unknown): { pageId: string; updat
     event?.type !== "page.properties_updated"
     || event.entity?.type !== "page"
     || typeof event.entity.id !== "string"
-    || !Array.isArray(event.data?.updated_properties)
   ) {
     return null;
   }
 
   return {
     pageId: event.entity.id,
-    updatedPropertyIds: event.data.updated_properties.filter((value): value is string => typeof value === "string"),
+    // Notion has changed webhook payload versions over time. The page ID is
+    // sufficient to reconcile publication/lock state, so treat an omitted or
+    // unrecognised property list as an empty list rather than dropping the event.
+    updatedPropertyIds: Array.isArray(event.data?.updated_properties)
+      ? event.data.updated_properties.filter((value): value is string => typeof value === "string")
+      : [],
   };
 }
 

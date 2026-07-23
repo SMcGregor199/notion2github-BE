@@ -116,6 +116,21 @@ describe("blog CMS metadata helpers", () => {
     expect(JSON.parse(String(vi.mocked(fetch).mock.calls[1]![1]?.body))).toEqual({ is_locked: false });
   });
 
+  it("reconciles a published page lock even when Notion does not identify the changed property", async () => {
+    process.env.NOTION_DATABASE_ID = "cms-data-source";
+    process.env.NOTION_API_KEY = "test-notion-key";
+    const publishedPage = cmsPage({ published: true, isLocked: false, publicationDate: "2026-07-23T12:00:00.000Z", newsletterState: "Draft" });
+    globalThis.fetch = vi.fn()
+      .mockResolvedValueOnce(jsonResponse(publishedPage))
+      .mockResolvedValueOnce(new Response(null, { status: 200 }));
+
+    await expect(processCmsPagePropertyUpdate("page-123", []))
+      .resolves.toEqual({ actions: ["publication"] });
+
+    expect(JSON.parse(String(vi.mocked(fetch).mock.calls[1]![1]?.body))).toEqual({ is_locked: true });
+    expect(mockRefreshPublishedBlogData).toHaveBeenCalledOnce();
+  });
+
   it("unpublishes and unlocks a live CMS page when Notion sends page.unlocked", async () => {
     process.env.NOTION_DATABASE_ID = "cms-data-source";
     process.env.NOTION_API_KEY = "test-notion-key";

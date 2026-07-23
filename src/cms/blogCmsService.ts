@@ -247,7 +247,10 @@ export async function processCmsPagePropertyUpdate(
     actions.push("metadata");
   }
 
-  if (changed.has(getPropertyId(page, CMS_PROPERTIES.published))) {
+  const publicationChanged = changed.has(getPropertyId(page, CMS_PROPERTIES.published));
+  const publicationLockOutOfSync = typeof page.is_locked === "boolean"
+    && page.is_locked !== getCheckboxValue(page, CMS_PROPERTIES.published);
+  if (publicationChanged || publicationLockOutOfSync) {
     await syncCmsPublicationForPage(page);
     await refreshPublishedBlogData();
     actions.push("publication");
@@ -255,7 +258,7 @@ export async function processCmsPagePropertyUpdate(
 
   if (
     changed.has(getPropertyId(page, CMS_PROPERTIES.linkedinDiscussionUrl))
-    && !changed.has(getPropertyId(page, CMS_PROPERTIES.published))
+    && !publicationChanged
     && getCheckboxValue(page, CMS_PROPERTIES.published)
   ) {
     await refreshPublishedBlogData();

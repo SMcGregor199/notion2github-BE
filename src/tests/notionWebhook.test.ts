@@ -35,6 +35,11 @@ describe("Notion connection webhook helpers", () => {
       entity: { type: "page", id: "page-123" },
       data: { updated_properties: ["%3Fabc"] },
     })).toBeNull();
+    expect(getPagePropertyUpdate({
+      type: "page.properties_updated",
+      entity: { type: "page", id: "page-123" },
+      data: {},
+    })).toEqual({ pageId: "page-123", updatedPropertyIds: [] });
   });
 
   it("routes only page-unlocked events", () => {
