@@ -89,7 +89,7 @@ describe("blog CMS metadata helpers", () => {
   it("locks on publish and unlocks on normal unpublish", async () => {
     process.env.NOTION_DATABASE_ID = "cms-data-source";
     process.env.NOTION_API_KEY = "test-notion-key";
-    const publishedPage = cmsPage({ published: true, isLocked: false, publicationDate: "", newsletterState: "" });
+    const publishedPage = cmsPage({ published: true, isLocked: false, publicationDate: "" });
     globalThis.fetch = vi.fn()
       .mockResolvedValueOnce(jsonResponse(publishedPage))
       .mockResolvedValueOnce(new Response(null, { status: 200 }));
@@ -101,11 +101,10 @@ describe("blog CMS metadata helpers", () => {
       is_locked: true,
       properties: {
         "Publication Date": { date: { start: expect.any(String) } },
-        "Newsletter State": { select: { name: "Draft" } },
       },
     });
 
-    const unpublishedPage = cmsPage({ published: false, isLocked: true, publicationDate: "2026-07-23T12:00:00.000Z", newsletterState: "Draft" });
+    const unpublishedPage = cmsPage({ published: false, isLocked: true, publicationDate: "2026-07-23T12:00:00.000Z" });
     globalThis.fetch = vi.fn()
       .mockResolvedValueOnce(jsonResponse(unpublishedPage))
       .mockResolvedValueOnce(new Response(null, { status: 200 }));
@@ -116,10 +115,36 @@ describe("blog CMS metadata helpers", () => {
     expect(JSON.parse(String(vi.mocked(fetch).mock.calls[1]![1]?.body))).toEqual({ is_locked: false });
   });
 
+  it("creates a newsletter draft only after an intro is entered and clears an empty draft", async () => {
+    process.env.NOTION_DATABASE_ID = "cms-data-source";
+    process.env.NOTION_API_KEY = "test-notion-key";
+    const pageWithIntro = cmsPage({ published: true, isLocked: true, newsletterIntro: "A new post is ready." });
+    globalThis.fetch = vi.fn()
+      .mockResolvedValueOnce(jsonResponse(pageWithIntro))
+      .mockResolvedValueOnce(new Response(null, { status: 200 }));
+
+    await expect(processCmsPagePropertyUpdate("page-123", ["newsletter-intro-property"]))
+      .resolves.toEqual({ actions: ["newsletterDraft"] });
+    expect(JSON.parse(String(vi.mocked(fetch).mock.calls[1]![1]?.body))).toEqual({
+      properties: { "Newsletter State": { select: { name: "Draft" } } },
+    });
+
+    const pageWithEmptyDraft = cmsPage({ published: true, isLocked: true, newsletterState: "Draft" });
+    globalThis.fetch = vi.fn()
+      .mockResolvedValueOnce(jsonResponse(pageWithEmptyDraft))
+      .mockResolvedValueOnce(new Response(null, { status: 200 }));
+
+    await expect(processCmsPagePropertyUpdate("page-123", ["newsletter-intro-property"]))
+      .resolves.toEqual({ actions: ["newsletterDraft"] });
+    expect(JSON.parse(String(vi.mocked(fetch).mock.calls[1]![1]?.body))).toEqual({
+      properties: { "Newsletter State": { select: null } },
+    });
+  });
+
   it("reconciles a published page lock even when Notion does not identify the changed property", async () => {
     process.env.NOTION_DATABASE_ID = "cms-data-source";
     process.env.NOTION_API_KEY = "test-notion-key";
-    const publishedPage = cmsPage({ published: true, isLocked: false, publicationDate: "2026-07-23T12:00:00.000Z", newsletterState: "Draft" });
+    const publishedPage = cmsPage({ published: true, isLocked: false, publicationDate: "2026-07-23T12:00:00.000Z" });
     globalThis.fetch = vi.fn()
       .mockResolvedValueOnce(jsonResponse(publishedPage))
       .mockResolvedValueOnce(new Response(null, { status: 200 }));
@@ -190,7 +215,7 @@ describe("blog CMS metadata helpers", () => {
   });
 });
 
-function cmsPage(input: { id?: string; published: boolean; isLocked: boolean; publicationDate?: string; newsletterState?: string }) {
+function cmsPage(input: { id?: string; published: boolean; isLocked: boolean; publicationDate?: string; newsletterState?: string; newsletterIntro?: string }) {
   return {
     id: input.id || "page-123",
     is_locked: input.isLocked,
@@ -198,6 +223,10 @@ function cmsPage(input: { id?: string; published: boolean; isLocked: boolean; pu
     properties: {
       Published: { id: "published-property", checkbox: input.published },
       "Publication Date": { date: input.publicationDate ? { start: input.publicationDate } : null },
+      "Newsletter Intro": {
+        id: "newsletter-intro-property",
+        rich_text: input.newsletterIntro ? [{ plain_text: input.newsletterIntro }] : [],
+      },
       "Newsletter State": { select: input.newsletterState ? { name: input.newsletterState } : null },
     },
   };

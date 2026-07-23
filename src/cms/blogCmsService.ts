@@ -30,6 +30,8 @@ export const CMS_PROPERTIES = {
   newsletterBroadcastId: NEWSLETTER_PROPERTIES.broadcastId,
 } as const;
 
+type CmsWebhookAction = "metadata" | "publication" | "publicData" | "newsletterDraft" | "newsletter";
+
 export type MetadataState = "New" | "Queued" | "Processing" | "Ready" | "Failed";
 
 export interface GeneratedMetadata {
@@ -231,14 +233,14 @@ export async function syncCmsPublication(recordId: number): Promise<{ pageId: st
 export async function processCmsPagePropertyUpdate(
   pageId: string,
   updatedPropertyIds: readonly string[],
-): Promise<{ actions: Array<"metadata" | "publication" | "publicData" | "newsletter"> }> {
+): Promise<{ actions: CmsWebhookAction[] }> {
   const page = await getCmsPage(pageId);
   if (!(await isCmsPage(page))) {
     return { actions: [] };
   }
 
   const changed = new Set(updatedPropertyIds);
-  const actions: Array<"metadata" | "publication" | "publicData" | "newsletter"> = [];
+  const actions: CmsWebhookAction[] = [];
   if (
     changed.has(getPropertyId(page, CMS_PROPERTIES.metadataState))
     && getSelectValue(page, CMS_PROPERTIES.metadataState) === "Queued"
@@ -265,6 +267,10 @@ export async function processCmsPagePropertyUpdate(
     actions.push("publicData");
   }
 
+  if (await syncNewsletterDraftState(page)) {
+    actions.push("newsletterDraft");
+  }
+
   if (
     changed.has(getPropertyId(page, CMS_PROPERTIES.newsletterState))
     && getSelectValue(page, CMS_PROPERTIES.newsletterState) === "Queued"
@@ -278,7 +284,7 @@ export async function processCmsPagePropertyUpdate(
 
 export async function processCmsPageUnlocked(
   pageId: string,
-): Promise<{ actions: Array<"metadata" | "publication" | "publicData" | "newsletter"> }> {
+): Promise<{ actions: CmsWebhookAction[] }> {
   const page = await getCmsPage(pageId);
   if (!(await isCmsPage(page)) || !getCheckboxValue(page, CMS_PROPERTIES.published)) {
     return { actions: [] };
@@ -335,15 +341,30 @@ async function syncCmsPublicationForPage(page: CmsPage): Promise<{ pageId: strin
     properties[CMS_PROPERTIES.publicationDate] = { date: { start: new Date().toISOString() } };
     publicationDateSet = true;
   }
-  if (published && !getSelectValue(page, CMS_PROPERTIES.newsletterState)) {
-    properties[CMS_PROPERTIES.newsletterState] = { select: { name: "Draft" } };
-  }
   const lockStateChanged = page.is_locked !== published;
   if (Object.keys(properties).length > 0 || lockStateChanged) {
     await updateCmsPage(page.id, properties, published);
   }
 
   return { pageId: page.id, published, publicationDateSet, lockStateChanged };
+}
+
+async function syncNewsletterDraftState(page: CmsPage): Promise<boolean> {
+  const intro = getRichTextValue(page, CMS_PROPERTIES.newsletterIntro);
+  const state = getSelectValue(page, CMS_PROPERTIES.newsletterState);
+  if (intro && !state) {
+    await updateCmsPage(page.id, {
+      [CMS_PROPERTIES.newsletterState]: { select: { name: "Draft" } },
+    });
+    return true;
+  }
+  if (!intro && state === "Draft") {
+    await updateCmsPage(page.id, {
+      [CMS_PROPERTIES.newsletterState]: { select: null },
+    });
+    return true;
+  }
+  return false;
 }
 
 export async function refreshPublishedBlogData(): Promise<void> {

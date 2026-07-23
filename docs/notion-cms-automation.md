@@ -7,8 +7,8 @@ The CMS uses Notion as the authoring surface and the backend Netlify site as the
 1. Add a new row to `Blog CMS Posts` and write the article in its page body.
 2. Click `Generate Metadata`.
 3. Wait for `Metadata State` to become `Ready`, then review the generated tag, summary, slug, and feature image.
-4. Check `Published` when the post is ready. Notion immediately calculates `Status` as `Live`; the connection webhook assigns `Publication Date` once, locks the page against accidental edits, and refreshes public blog/RSS data.
-5. The first publish creates a `Newsletter State` of `Draft`. Write and review the `Newsletter Intro`, publish the LinkedIn discussion post and paste its URL, then use `Send Newsletter` to set the state to `Queued`. The connection webhook is the only send trigger; publishing never sends email.
+4. Check `Published` when the post is ready. Notion immediately calculates `Status` as `Live`; the connection webhook assigns `Publication Date` once, locks the page against accidental edits, and refreshes public blog/RSS data. Publishing does not create or change a newsletter.
+5. When you begin a newsletter by entering `Newsletter Intro`, the connection webhook sets `Newsletter State` to `Draft`. Clearing an unsent draft intro returns that state to blank. Write and review the intro, publish the LinkedIn discussion post and paste its URL, then use `Send Newsletter` to set the state to `Queued`. The connection webhook is the only send trigger; publishing never sends email.
 
 ### Revising a Live Post
 
