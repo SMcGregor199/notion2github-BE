@@ -105,13 +105,15 @@ export async function confirmSubscription(token: string): Promise<boolean> {
   if (!subscriber || subscriber.status !== "Pending" || !isFutureDate(subscriber.tokenExpiresAt)) return false;
 
   const resendContactId = await syncConfirmedContact(subscriber);
+  const confirmedAt = new Date().toISOString();
   await updateSubscriber(subscriber.id, {
     [SUBSCRIBER_PROPERTIES.status]: selectProperty("Subscribed"),
-    [SUBSCRIBER_PROPERTIES.confirmedAt]: dateProperty(new Date().toISOString()),
+    [SUBSCRIBER_PROPERTIES.confirmedAt]: dateProperty(confirmedAt),
     [SUBSCRIBER_PROPERTIES.confirmationTokenHash]: richTextProperty(""),
     [SUBSCRIBER_PROPERTIES.confirmationTokenExpiresAt]: dateProperty(""),
     [SUBSCRIBER_PROPERTIES.resendContactId]: richTextProperty(resendContactId),
   });
+  await sendOwnerConfirmationAlert(subscriber, confirmedAt);
   return true;
 }
 
@@ -303,6 +305,35 @@ async function sendConfirmationEmail(input: SubscriberInput, token: string): Pro
   const base = requiredEnv("NEWSLETTER_CONFIRMATION_BASE_URL");
   const url = `${base}${base.includes("?") ? "&" : "?"}token=${encodeURIComponent(token)}`;
   await resendRequest("/emails", { method: "POST", headers: { "Idempotency-Key": `confirm-${hashToken(token)}` }, body: JSON.stringify({ from: process.env.RESEND_FROM_EMAIL || "Shayne McGregor <updates@shaynemcgregor.dev>", reply_to: process.env.RESEND_REPLY_TO || "updates@shaynemcgregor.dev", to: [input.email], subject: "Confirm your subscription to Notes from Shayne", html: `<p>Hi ${escapeHtml(input.firstName)},</p><p>Please confirm that you want to receive Notes from Shayne.</p><p><a href="${escapeHtml(url)}">Confirm subscription</a></p><p>If you did not request this, you can ignore this email.</p>` }) });
+}
+
+async function sendOwnerConfirmationAlert(subscriber: SubscriberRecord, confirmedAt: string): Promise<void> {
+  const recipient = normalizeEmail(process.env.NEWSLETTER_ADMIN_EMAIL);
+  if (!recipient) {
+    console.warn("Confirmed subscriber alert skipped: NEWSLETTER_ADMIN_EMAIL is not configured.");
+    return;
+  }
+
+  const interests = subscriber.whySubscribe
+    ? `<p><strong>Interested in:</strong><br>${escapeHtml(subscriber.whySubscribe)}</p>`
+    : "";
+  const html = `<p>A reader confirmed their subscription to Notes from Shayne.</p><p><strong>Name:</strong> ${escapeHtml(`${subscriber.firstName} ${subscriber.lastName}`.trim())}<br><strong>Email:</strong> ${escapeHtml(subscriber.email)}<br><strong>Confirmed:</strong> ${escapeHtml(confirmedAt)}</p>${interests}`;
+  try {
+    await resendRequest("/emails", {
+      method: "POST",
+      headers: { "Idempotency-Key": `subscriber-confirmed-${subscriber.id}` },
+      body: JSON.stringify({
+        from: process.env.RESEND_FROM_EMAIL || "Shayne McGregor <updates@shaynemcgregor.dev>",
+        reply_to: process.env.RESEND_REPLY_TO || "updates@shaynemcgregor.dev",
+        to: [recipient],
+        subject: "New confirmed Notes from Shayne subscriber",
+        html,
+      }),
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error("Confirmed subscriber alert failed", { subscriberId: subscriber.id, message });
+  }
 }
 
 async function getNotionPage(id: string): Promise<NotionPage> { return notionRequest<NotionPage>(`/pages/${encodeURIComponent(id)}`); }

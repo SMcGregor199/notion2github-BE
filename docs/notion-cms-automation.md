@@ -100,12 +100,12 @@ This is a separate production-activation checklist. Do not enable the button, fo
 3. Configure a dedicated inbound-mail forwarding provider in Netlify DNS so replies to `updates@shaynemcgregor.dev` forward to the existing Gmail inbox. This project intentionally has no inbound-email handler.
 4. In Resend, create a `Notes from Shayne` segment and matching topic. Keep their IDs private and use the segment for broadcasts.
 5. Set these private backend Netlify variables (without committing values):
-   - `NOTION_SUBSCRIBERS_DATABASE_ID`, `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET`
+   - `NOTION_SUBSCRIBERS_DATABASE_ID`, `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET`, `NEWSLETTER_ADMIN_EMAIL` (the private inbox that receives confirmed-subscriber alerts)
    - `RESEND_FROM_EMAIL` (`Shayne McGregor <updates@shaynemcgregor.dev>`), `RESEND_REPLY_TO` (`updates@shaynemcgregor.dev`)
    - `RESEND_BLOG_UPDATES_SEGMENT_ID`, `RESEND_BLOG_UPDATES_TOPIC_ID`
    - `NEWSLETTER_CONFIRMATION_BASE_URL` (the deployed `newsletter-confirm` function URL), `NEWSLETTER_SITE_URL` (`https://shaynemcgregor.dev`), `BACKEND_ORIGIN` (the deployed backend origin, required for the feature image URL), and optionally `NEWSLETTER_ALLOWED_ORIGIN`
 6. Register `https://shaynemcgregordev-be.netlify.app/.netlify/functions/resend-webhook` in Resend. Subscribe it to contact updates and `email.bounced`. The function verifies Resend's Svix signature before changing Notion; an unsubscribe becomes `Unsubscribed`, and a permanent bounce becomes `Bounced`.
-7. Run the end-to-end checks with a test address: form validation, a pending Notion record, a valid confirmation, expired/replayed confirmation links, Resend contact/segment/topic sync, an unsubscribe webhook, a permanent-bounce webhook, first-publish draft creation, missing-draft send failure, and one successful newsletter broadcast.
+7. Run the end-to-end checks with a test address: form validation, a pending Notion record, a valid confirmation and owner alert, expired/replayed confirmation links, Resend contact/segment/topic sync, an unsubscribe webhook, a permanent-bounce webhook, first-publish draft creation, missing-draft send failure, and one successful newsletter broadcast. Owner-alert failures are logged but never invalidate a legitimate subscription.
 
 The new endpoint set is `newsletter-subscribe`, `newsletter-confirm`, `resend-webhook`, and `newsletter-send`. The subscription and confirmation endpoints are public by design but validate inputs and use non-revealing responses; Resend webhooks require their signed request; the direct send endpoint requires `CMS_WEBHOOK_SECRET`. The public frontend never receives a provider credential.
 
