@@ -63,6 +63,8 @@ describe("blog CMS metadata helpers", () => {
     expect(metadataPrompt).toContain("Engineering, Performance");
     expect(metadataPrompt).toContain("punchy, accurate share-preview sentence no longer than 70 characters");
     expect(imagePrompt).toContain("spacey hip-hop and cyberpunk editorial art");
+    expect(imagePrompt).toContain("centered square safe area");
+    expect(imagePrompt).toContain("central two-thirds of the canvas width");
     expect(imagePrompt).toContain("Do not render words");
     expect(imagePrompt).toContain("cache node");
   });

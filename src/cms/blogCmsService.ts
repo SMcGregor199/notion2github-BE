@@ -140,6 +140,7 @@ export function buildFeatureImagePrompt(input: { title: string; summary: string;
     "Create a polished 3:2 editorial feature illustration for a personal technology blog.",
     "Visual direction: spacey hip-hop and cyberpunk editorial art; anime-influenced but original character and object design; electric magenta, cyan, deep blue, and violet lighting; cosmic environments; lo-fi texture; confident cinematic composition.",
     "Make the image specifically communicate the article subject. Use one clear focal scene, not a generic neon wallpaper.",
+    "Compose for article, featured-card, thumbnail, and social-share crops: keep every essential subject, face, device, and story detail entirely inside the centered square safe area (the central two-thirds of the canvas width). Reserve the outer left and right edges for nonessential atmospheric context only.",
     "Do not render words, letters, logos, UI copy, watermarks, or recognizable copyrighted characters.",
     `Article title: ${input.title}`,
     `Article summary: ${input.summary}`,
