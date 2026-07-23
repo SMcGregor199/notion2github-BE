@@ -6,6 +6,11 @@ export interface NotionPagePropertiesUpdatedEvent {
   data?: { updated_properties?: unknown };
 }
 
+export interface NotionPageUnlockedEvent {
+  type?: string;
+  entity?: { id?: string; type?: string };
+}
+
 export function getNotionVerificationToken(payload: unknown): string | null {
   if (!payload || typeof payload !== "object") return null;
   const token = (payload as { verification_token?: unknown }).verification_token;
@@ -44,4 +49,17 @@ export function getPagePropertyUpdate(payload: unknown): { pageId: string; updat
     pageId: event.entity.id,
     updatedPropertyIds: event.data.updated_properties.filter((value): value is string => typeof value === "string"),
   };
+}
+
+export function getPageUnlocked(payload: unknown): { pageId: string } | null {
+  const event = payload as NotionPageUnlockedEvent | null;
+  if (
+    event?.type !== "page.unlocked"
+    || event.entity?.type !== "page"
+    || typeof event.entity.id !== "string"
+  ) {
+    return null;
+  }
+
+  return { pageId: event.entity.id };
 }

@@ -2,6 +2,7 @@ import { createHmac } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import {
   getNotionVerificationToken,
+  getPageUnlocked,
   getPagePropertyUpdate,
   isNotionWebhookSignatureValid,
 } from "../cms/notionWebhook.js";
@@ -33,6 +34,17 @@ describe("Notion connection webhook helpers", () => {
       type: "page.content_updated",
       entity: { type: "page", id: "page-123" },
       data: { updated_properties: ["%3Fabc"] },
+    })).toBeNull();
+  });
+
+  it("routes only page-unlocked events", () => {
+    expect(getPageUnlocked({
+      type: "page.unlocked",
+      entity: { type: "page", id: "page-123" },
+    })).toEqual({ pageId: "page-123" });
+    expect(getPageUnlocked({
+      type: "page.locked",
+      entity: { type: "page", id: "page-123" },
     })).toBeNull();
   });
 });

@@ -41,6 +41,7 @@ export interface GeneratedMetadata {
 export interface CmsPage {
   id: string;
   created_time: string;
+  is_locked?: boolean;
   properties: Record<string, unknown>;
   parent?: {
     type?: string;
@@ -222,7 +223,7 @@ async function initializeCmsMetadataForPage(page: CmsPage): Promise<{ pageId: st
   }
 }
 
-export async function syncCmsPublication(recordId: number): Promise<{ pageId: string; published: boolean; publicationDateSet: boolean }> {
+export async function syncCmsPublication(recordId: number): Promise<{ pageId: string; published: boolean; publicationDateSet: boolean; lockStateChanged: boolean }> {
   const page = await findCmsPage(recordId);
   return syncCmsPublicationForPage(page);
 }
@@ -272,7 +273,56 @@ export async function processCmsPagePropertyUpdate(
   return { actions };
 }
 
-async function syncCmsPublicationForPage(page: CmsPage): Promise<{ pageId: string; published: boolean; publicationDateSet: boolean }> {
+export async function processCmsPageUnlocked(
+  pageId: string,
+): Promise<{ actions: Array<"metadata" | "publication" | "publicData" | "newsletter"> }> {
+  const page = await getCmsPage(pageId);
+  if (!(await isCmsPage(page)) || !getCheckboxValue(page, CMS_PROPERTIES.published)) {
+    return { actions: [] };
+  }
+
+  await updateCmsPage(page.id, {
+    [CMS_PROPERTIES.published]: { checkbox: false },
+  }, false);
+  await refreshPublishedBlogData();
+  return { actions: ["publication"] };
+}
+
+export async function reconcileCmsPageLocks(): Promise<{
+  inspected: number;
+  locked: number;
+  unlocked: number;
+  unchanged: number;
+}> {
+  const dataSourceId = await resolveDataSourceId();
+  const result = { inspected: 0, locked: 0, unlocked: 0, unchanged: 0 };
+  let cursor: string | null | undefined;
+
+  do {
+    const response = await notionFetch(`/data_sources/${dataSourceId}/query`, {
+      method: "POST",
+      body: JSON.stringify({ page_size: 100, start_cursor: cursor }),
+    });
+    const pageResult = await response.json() as PageQueryResponse;
+    for (const page of pageResult.results || []) {
+      result.inspected += 1;
+      const shouldBeLocked = getCheckboxValue(page, CMS_PROPERTIES.published);
+      if (page.is_locked === shouldBeLocked) {
+        result.unchanged += 1;
+        continue;
+      }
+
+      await updateCmsPage(page.id, {}, shouldBeLocked);
+      if (shouldBeLocked) result.locked += 1;
+      else result.unlocked += 1;
+    }
+    cursor = pageResult.has_more ? pageResult.next_cursor : undefined;
+  } while (cursor);
+
+  return result;
+}
+
+async function syncCmsPublicationForPage(page: CmsPage): Promise<{ pageId: string; published: boolean; publicationDateSet: boolean; lockStateChanged: boolean }> {
   const published = getCheckboxValue(page, CMS_PROPERTIES.published);
   const publicationDate = getDateValue(page, CMS_PROPERTIES.publicationDate);
   let publicationDateSet = false;
@@ -285,11 +335,12 @@ async function syncCmsPublicationForPage(page: CmsPage): Promise<{ pageId: strin
   if (published && !getSelectValue(page, CMS_PROPERTIES.newsletterState)) {
     properties[CMS_PROPERTIES.newsletterState] = { select: { name: "Draft" } };
   }
-  if (Object.keys(properties).length > 0) {
-    await updateCmsPage(page.id, properties);
+  const lockStateChanged = page.is_locked !== published;
+  if (Object.keys(properties).length > 0 || lockStateChanged) {
+    await updateCmsPage(page.id, properties, published);
   }
 
-  return { pageId: page.id, published, publicationDateSet };
+  return { pageId: page.id, published, publicationDateSet, lockStateChanged };
 }
 
 export async function refreshPublishedBlogData(): Promise<void> {
@@ -423,10 +474,14 @@ async function getExistingSlugs(excludePageId?: string): Promise<string[]> {
   return slugs;
 }
 
-async function updateCmsPage(pageId: string, properties: Record<string, unknown>): Promise<void> {
+async function updateCmsPage(pageId: string, properties: Record<string, unknown>, isLocked?: boolean): Promise<void> {
+  const body: { properties?: Record<string, unknown>; is_locked?: boolean } = {};
+  if (Object.keys(properties).length > 0) body.properties = properties;
+  if (typeof isLocked === "boolean") body.is_locked = isLocked;
+
   await notionFetch(`/pages/${pageId}`, {
     method: "PATCH",
-    body: JSON.stringify({ properties }),
+    body: JSON.stringify(body),
   });
 }
 

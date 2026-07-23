@@ -1,8 +1,13 @@
 import {
   getNotionVerificationToken,
+  getPageUnlocked,
   getPagePropertyUpdate,
   isNotionWebhookSignatureValid,
 } from "./notionWebhook.js";
+
+type CmsWebhookBackgroundJob =
+  | { eventType: "page.properties_updated"; pageId: string; updatedPropertyIds: string[] }
+  | { eventType: "page.unlocked"; pageId: string };
 
 export async function handleCmsNotionWebhook(request: Request): Promise<Response> {
   if (request.method !== "POST") {
@@ -31,8 +36,14 @@ export async function handleCmsNotionWebhook(request: Request): Promise<Response
     return new Response("Unauthorized", { status: 401 });
   }
 
-  const update = getPagePropertyUpdate(payload);
-  if (!update) {
+  const propertyUpdate = getPagePropertyUpdate(payload);
+  const pageUnlocked = getPageUnlocked(payload);
+  const job: CmsWebhookBackgroundJob | null = propertyUpdate
+    ? { eventType: "page.properties_updated", ...propertyUpdate }
+    : pageUnlocked
+      ? { eventType: "page.unlocked", ...pageUnlocked }
+      : null;
+  if (!job) {
     return Response.json({ actions: [] });
   }
 
@@ -42,9 +53,10 @@ export async function handleCmsNotionWebhook(request: Request): Promise<Response
       throw new Error("NOTION_WEBHOOK_VERIFICATION_TOKEN is not configured.");
     }
 
-    console.info("Notion CMS property update accepted", {
-      pageId: update.pageId,
-      updatedPropertyIds: update.updatedPropertyIds,
+    console.info("Notion CMS event accepted", {
+      eventType: job.eventType,
+      pageId: job.pageId,
+      ...(job.eventType === "page.properties_updated" ? { updatedPropertyIds: job.updatedPropertyIds } : {}),
     });
     const jobResponse = await fetch(new URL("/.netlify/functions/cms-notion-webhook-background", request.url), {
       method: "POST",
@@ -52,7 +64,7 @@ export async function handleCmsNotionWebhook(request: Request): Promise<Response
         "Content-Type": "application/json",
         "X-CMS-Background-Token": backgroundToken,
       },
-      body: JSON.stringify(update),
+      body: JSON.stringify(job),
     });
     if (!jobResponse.ok) {
       throw new Error(`Unable to start CMS background job (${jobResponse.status}).`);

@@ -1,7 +1,8 @@
-import { processCmsPagePropertyUpdate } from "./blogCmsService.js";
+import { processCmsPagePropertyUpdate, processCmsPageUnlocked } from "./blogCmsService.js";
 import { isSharedSecretValid } from "./notionWebhook.js";
 
 interface CmsBackgroundJobPayload {
+  eventType?: unknown;
   pageId?: unknown;
   updatedPropertyIds?: unknown;
 }
@@ -23,14 +24,23 @@ export async function handleCmsNotionWebhookBackground(request: Request): Promis
   } catch {
     return new Response("Invalid JSON", { status: 400 });
   }
-  if (typeof payload.pageId !== "string" || !Array.isArray(payload.updatedPropertyIds)) {
+  if (typeof payload.pageId !== "string") {
     return new Response("Invalid CMS background job", { status: 400 });
   }
 
-  const updatedPropertyIds = payload.updatedPropertyIds.filter((value): value is string => typeof value === "string");
   try {
-    const result = await processCmsPagePropertyUpdate(payload.pageId, updatedPropertyIds);
-    console.info("CMS background job completed", { pageId: payload.pageId, actions: result.actions });
+    const result = payload.eventType === "page.unlocked"
+      ? await processCmsPageUnlocked(payload.pageId)
+      : payload.eventType === "page.properties_updated" && Array.isArray(payload.updatedPropertyIds)
+        ? await processCmsPagePropertyUpdate(
+          payload.pageId,
+          payload.updatedPropertyIds.filter((value): value is string => typeof value === "string"),
+        )
+        : null;
+    if (!result) {
+      return new Response("Invalid CMS background job", { status: 400 });
+    }
+    console.info("CMS background job completed", { pageId: payload.pageId, eventType: payload.eventType, actions: result.actions });
     return Response.json(result);
   } catch (error) {
     console.error("CMS background job failed", { pageId: payload.pageId, error });

@@ -7,8 +7,12 @@ The CMS uses Notion as the authoring surface and the backend Netlify site as the
 1. Add a new row to `Blog CMS Posts` and write the article in its page body.
 2. Click `Generate Metadata`.
 3. Wait for `Metadata State` to become `Ready`, then review the generated tag, summary, slug, and feature image.
-4. Check `Published` when the post is ready. Notion immediately calculates `Status` as `Live`; the connection webhook assigns `Publication Date` once and refreshes public blog/RSS data.
+4. Check `Published` when the post is ready. Notion immediately calculates `Status` as `Live`; the connection webhook assigns `Publication Date` once, locks the page against accidental edits, and refreshes public blog/RSS data.
 5. The first publish creates a `Newsletter State` of `Draft`. Write and review the `Newsletter Intro`, publish the LinkedIn discussion post and paste its URL, then use `Send Newsletter` to set the state to `Queued`. The connection webhook is the only send trigger; publishing never sends email.
+
+### Revising a Live Post
+
+To revise a live post, open the page and choose **Locked → Unlock for everyone**. The connection webhook treats that intentional global unlock as an unpublish action: it clears `Published`, the `Status` formula returns to `Draft`, public blog/RSS data refreshes, and the page stays unlocked for editing. Do not use **Unlock for me** for this workflow; it keeps the global lock in place and does not reliably trigger the automation.
 
 ## One-Time Notion Setup
 
@@ -46,11 +50,11 @@ The newsletter requires a non-empty intro and a valid LinkedIn discussion URL. I
 
    `https://shaynemcgregordev-be.netlify.app/.netlify/functions/cms-notion-webhook`
 
-3. Select only `page.properties_updated` events. Notion sends a verification request to the endpoint.
+3. Select `page.properties_updated` and `page.unlocked` events. Notion sends a verification request to the endpoint.
 4. In the backend site's Netlify function logs, copy the received verification token. Add it as the private `NOTION_WEBHOOK_VERIFICATION_TOKEN` environment variable, redeploy the backend, and paste that same token into Notion's verification dialog.
 5. Confirm the subscription is active. Notion signs later events with this token; the backend rejects unsigned or invalid events.
 
-The public webhook verifies the signed Notion event, then starts a protected Netlify Background Function for long-running image generation and upload. Notion receives an immediate acknowledgement while the background job can continue safely. The webhook reacts only when `Metadata State` changes to `Queued` or `Published` changes. Changing `Published` to either checked or unchecked runs the existing publication sync and refreshes public blog/RSS data.
+The public webhook verifies the signed Notion event, then starts a protected Netlify Background Function for long-running image generation and upload. Notion receives an immediate acknowledgement while the background job can continue safely. The webhook reacts when `Metadata State` changes to `Queued`, when `Published` changes, or when a page is globally unlocked. Changing `Published` to either checked or unchecked aligns the native page lock and refreshes public blog/RSS data. Globally unlocking a published post clears `Published` and refreshes public data.
 
 ### Optional Paid-plan Automations
 
@@ -61,7 +65,15 @@ If the workspace later moves to a paid Notion plan, the existing direct endpoint
 - Header: `X-CMS-Webhook-Secret` with the Netlify `CMS_WEBHOOK_SECRET` value.
 - Include `CMS Record ID` in the automation payload.
 
-The `Status` formula derives its value from `Published`: checked is `Live`, unchecked is `Draft`. The publish endpoint only sets `Publication Date` when the checkbox is true and the field is empty. Unpublishing hides the post but retains its original publication date.
+The `Status` formula derives its value from `Published`: checked is `Live`, unchecked is `Draft`. The publish endpoint only sets `Publication Date` when the checkbox is true and the field is empty. Unpublishing hides the post, unlocks its page, and retains its original publication date.
+
+## Existing Published Post Lock Reconciliation
+
+After deploying the page-lock implementation and adding `page.unlocked` to the Notion webhook subscription, run this protected backend endpoint once to align existing CMS pages with their current `Published` values:
+
+`POST https://shaynemcgregordev-be.netlify.app/.netlify/functions/cms-reconcile-page-locks`
+
+Pass the existing `X-CMS-Webhook-Secret` header. The response reports inspected, locked, unlocked, and unchanged counts. The operation is idempotent, so it is safe to rerun; it changes only pages whose native lock state does not match `Published`.
 
 ## Netlify Variables
 
