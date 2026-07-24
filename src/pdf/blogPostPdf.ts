@@ -264,13 +264,22 @@ async function renderImage(document: PDFKit.PDFDocument, source: string, caption
     if (!response.ok) {
       throw new Error(`image returned HTTP ${response.status}`);
     }
-    const jpeg = await sharp(Buffer.from(await response.arrayBuffer())).jpeg({ quality: 82 }).toBuffer();
-    const width = document.page.width - PAGE_MARGIN * 2;
-    ensureSpace(document, 390);
+    const jpeg = await sharp(Buffer.from(await response.arrayBuffer())).rotate().jpeg({ quality: 82 }).toBuffer();
+    const metadata = await sharp(jpeg).metadata();
+    const layout = imageDisplayLayout(metadata.width, metadata.height, document.page.width - PAGE_MARGIN * 2, 360);
+    if (!layout) {
+      throw new Error("image dimensions are unavailable");
+    }
+    document.font("Helvetica-Oblique").fontSize(9);
+    const captionHeight = caption ? document.heightOfString(caption, { width: layout.width, align: "center", lineGap: 3 }) + 10 : 0;
+    ensureSpace(document, layout.height + captionHeight + 36);
     document.moveDown(0.2);
-    document.image(jpeg, { fit: [width, 360], align: "center" });
+    const imageX = (document.page.width - layout.width) / 2;
+    const imageY = document.y;
+    document.image(jpeg, imageX, imageY, { width: layout.width, height: layout.height });
+    document.y = imageY + layout.height;
     if (caption) {
-      document.moveDown(0.25).fillColor("#6b6259").font("Helvetica-Oblique").fontSize(9).text(caption, { align: "center", lineGap: 3 });
+      document.moveDown(0.25).fillColor("#6b6259").font("Helvetica-Oblique").fontSize(9).text(caption, { width: layout.width, align: "center", lineGap: 3 });
     }
     document.moveDown(0.8);
   } catch (error) {
@@ -298,6 +307,17 @@ function ensureSpace(document: PDFKit.PDFDocument, height: number): void {
   if (document.y + height > document.page.height - PAGE_MARGIN) {
     document.addPage();
   }
+}
+
+export function imageDisplayLayout(imageWidth: number | undefined, imageHeight: number | undefined, maxWidth: number, maxHeight: number): { width: number; height: number } | null {
+  if (!imageWidth || !imageHeight || imageWidth <= 0 || imageHeight <= 0) {
+    return null;
+  }
+  const scale = Math.min(maxWidth / imageWidth, maxHeight / imageHeight, 1);
+  return {
+    width: Number((imageWidth * scale).toFixed(2)),
+    height: Number((imageHeight * scale).toFixed(2)),
+  };
 }
 
 function markdownBlocks(markdown: string): PdfBlock[] {

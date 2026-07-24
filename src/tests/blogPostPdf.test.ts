@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { serveBlogPostPdf } from "../pdf/blogPostPdf.js";
+import { imageDisplayLayout, serveBlogPostPdf } from "../pdf/blogPostPdf.js";
 
 const post = {
   link: "a-useful-post",
@@ -28,6 +28,12 @@ function contentStore(posts: unknown = [post]) {
 }
 
 describe("blog post PDF response", () => {
+  it("uses each image's actual display dimensions instead of a fixed page reservation", () => {
+    expect(imageDisplayLayout(1200, 400, 483, 360)).toEqual({ width: 483, height: 161 });
+    expect(imageDisplayLayout(400, 1200, 483, 360)).toEqual({ width: 120, height: 360 });
+    expect(imageDisplayLayout(undefined, 400, 483, 360)).toBeNull();
+  });
+
   it("returns a downloadable branded PDF for the requested published post", async () => {
     const response = await serveBlogPostPdf({
       store: contentStore(),
