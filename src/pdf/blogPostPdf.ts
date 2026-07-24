@@ -140,8 +140,6 @@ export async function renderBlogPostPdf(
     await renderBlock(document, block, options);
   }
 
-  document.moveDown(1.4);
-  document.fillColor("#6b6259").font("Helvetica").fontSize(9).text(`Read online: ${sourceUrl}`, { link: sourceUrl, underline: true });
   addPageFooters(document, sourceUrl);
   document.end();
   return finished;
@@ -305,6 +303,7 @@ async function renderImage(document: PDFKit.PDFDocument, source: string, caption
       document.fillColor("#6b6259").font("Helvetica-Oblique").fontSize(9).text(caption, imageX, captionY, { width: layout.width, align: "center", lineGap: 3 });
       document.y = captionY + captionHeight - 10;
     }
+    document.x = PAGE_MARGIN;
     document.moveDown(0.8);
   } catch (error) {
     (options.logger ?? console).warn("Skipping unavailable PDF image", {
