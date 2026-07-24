@@ -31,6 +31,8 @@ describe("blog post PDF response", () => {
   it("uses each image's actual display dimensions instead of a fixed page reservation", () => {
     expect(imageDisplayLayout(1200, 400, 483, 360)).toEqual({ width: 483, height: 161 });
     expect(imageDisplayLayout(400, 1200, 483, 360)).toEqual({ width: 120, height: 360 });
+    expect(imageDisplayLayout(400, 1200, 483, 220)).toEqual({ width: 73.33, height: 220 });
+    expect(imageDisplayLayout(400, 1200, 483, 0)).toBeNull();
     expect(imageDisplayLayout(undefined, 400, 483, 360)).toBeNull();
   });
 

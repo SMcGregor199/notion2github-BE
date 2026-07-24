@@ -7,6 +7,9 @@ const SITE_URL = "https://shaynemcgregor.dev";
 const PDF_CACHE_CONTROL = "public, max-age=300, stale-while-revalidate=3600";
 const PAGE_MARGIN = 56;
 const IMAGE_TIMEOUT_MS = 8_000;
+const MAX_IMAGE_HEIGHT = 360;
+const MIN_IMAGE_HEIGHT = 140;
+const IMAGE_BLOCK_SPACING = 36;
 
 type PdfStore = {
   get(key: string, options: { type: "json" }): Promise<unknown>;
@@ -266,20 +269,41 @@ async function renderImage(document: PDFKit.PDFDocument, source: string, caption
     }
     const jpeg = await sharp(Buffer.from(await response.arrayBuffer())).rotate().jpeg({ quality: 82 }).toBuffer();
     const metadata = await sharp(jpeg).metadata();
-    const layout = imageDisplayLayout(metadata.width, metadata.height, document.page.width - PAGE_MARGIN * 2, 360);
-    if (!layout) {
+    const contentWidth = document.page.width - PAGE_MARGIN * 2;
+    const preferredLayout = imageDisplayLayout(metadata.width, metadata.height, contentWidth, MAX_IMAGE_HEIGHT);
+    if (!preferredLayout) {
       throw new Error("image dimensions are unavailable");
     }
+    let layout = preferredLayout;
     document.font("Helvetica-Oblique").fontSize(9);
-    const captionHeight = caption ? document.heightOfString(caption, { width: layout.width, align: "center", lineGap: 3 }) + 10 : 0;
-    ensureSpace(document, layout.height + captionHeight + 36);
+    let captionHeight = caption ? document.heightOfString(caption, { width: layout.width, align: "center", lineGap: 3 }) + 10 : 0;
+    const availableHeight = document.page.height - PAGE_MARGIN - document.y;
+
+    if (layout.height + captionHeight + IMAGE_BLOCK_SPACING > availableHeight) {
+      const remainingImageHeight = availableHeight - captionHeight - IMAGE_BLOCK_SPACING;
+      const compactLayout = imageDisplayLayout(metadata.width, metadata.height, contentWidth, remainingImageHeight);
+      if (compactLayout && compactLayout.height >= MIN_IMAGE_HEIGHT) {
+        layout = compactLayout;
+        captionHeight = caption ? document.heightOfString(caption, { width: layout.width, align: "center", lineGap: 3 }) + 10 : 0;
+      }
+    }
+
+    if (layout.height + captionHeight + IMAGE_BLOCK_SPACING > availableHeight) {
+      document.addPage();
+      layout = preferredLayout;
+      captionHeight = caption ? document.heightOfString(caption, { width: layout.width, align: "center", lineGap: 3 }) + 10 : 0;
+    }
+
     document.moveDown(0.2);
     const imageX = (document.page.width - layout.width) / 2;
     const imageY = document.y;
     document.image(jpeg, imageX, imageY, { width: layout.width, height: layout.height });
     document.y = imageY + layout.height;
     if (caption) {
-      document.moveDown(0.25).fillColor("#6b6259").font("Helvetica-Oblique").fontSize(9).text(caption, { width: layout.width, align: "center", lineGap: 3 });
+      document.moveDown(0.25);
+      const captionY = document.y;
+      document.fillColor("#6b6259").font("Helvetica-Oblique").fontSize(9).text(caption, imageX, captionY, { width: layout.width, align: "center", lineGap: 3 });
+      document.y = captionY + captionHeight - 10;
     }
     document.moveDown(0.8);
   } catch (error) {
@@ -303,14 +327,8 @@ function addPageFooters(document: PDFKit.PDFDocument, sourceUrl: string): void {
   }
 }
 
-function ensureSpace(document: PDFKit.PDFDocument, height: number): void {
-  if (document.y + height > document.page.height - PAGE_MARGIN) {
-    document.addPage();
-  }
-}
-
 export function imageDisplayLayout(imageWidth: number | undefined, imageHeight: number | undefined, maxWidth: number, maxHeight: number): { width: number; height: number } | null {
-  if (!imageWidth || !imageHeight || imageWidth <= 0 || imageHeight <= 0) {
+  if (!imageWidth || !imageHeight || imageWidth <= 0 || imageHeight <= 0 || maxWidth <= 0 || maxHeight <= 0) {
     return null;
   }
   const scale = Math.min(maxWidth / imageWidth, maxHeight / imageHeight, 1);
