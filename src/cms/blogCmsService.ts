@@ -20,6 +20,7 @@ export const CMS_PROPERTIES = {
   slug: "Slug",
   featureImage: "Feature Image",
   publicationDate: "Publication Date",
+  series: "Series",
   recordId: "CMS Record ID",
   metadataState: "Metadata State",
   metadataError: "Metadata Error",
@@ -249,6 +250,10 @@ export async function processCmsPagePropertyUpdate(
 ): Promise<{ actions: CmsWebhookAction[] }> {
   const page = await getCmsPage(pageId);
   if (!(await isCmsPage(page))) {
+    if (await isBlogSeriesPage(page) && hasSeriesPublicPropertyUpdate(page, updatedPropertyIds)) {
+      await refreshPublishedBlogData();
+      return { actions: ["publicData"] };
+    }
     return { actions: [] };
   }
 
@@ -271,11 +276,9 @@ export async function processCmsPagePropertyUpdate(
     actions.push("publication");
   }
 
-  if (
-    changed.has(getPropertyId(page, CMS_PROPERTIES.linkedinDiscussionUrl))
-    && !publicationChanged
-    && getCheckboxValue(page, CMS_PROPERTIES.published)
-  ) {
+  const publicPostDataChanged = [CMS_PROPERTIES.linkedinDiscussionUrl, CMS_PROPERTIES.series]
+    .some((property) => changed.has(getPropertyId(page, property)));
+  if (publicPostDataChanged && !publicationChanged && getCheckboxValue(page, CMS_PROPERTIES.published)) {
     await refreshPublishedBlogData();
     actions.push("publicData");
   }
@@ -537,6 +540,21 @@ async function isCmsPage(page: CmsPage): Promise<boolean> {
   const parent = page.parent || {};
   return parent.data_source_id === dataSourceId
     || (parent.type === "data_source_id" && parent.id === dataSourceId);
+}
+
+async function isBlogSeriesPage(page: CmsPage): Promise<boolean> {
+  const configured = String(process.env.NOTION_BLOG_SERIES_DATABASE_ID || "").replace(/^collection:\/\//, "");
+  if (!configured) return false;
+
+  const parent = page.parent || {};
+  return parent.data_source_id === configured
+    || (parent.type === "data_source_id" && parent.id === configured);
+}
+
+function hasSeriesPublicPropertyUpdate(page: CmsPage, updatedPropertyIds: readonly string[]): boolean {
+  if (updatedPropertyIds.length === 0) return true;
+  const publicProperties = ["Name", "Slug", "Description"];
+  return publicProperties.some((property) => updatedPropertyIds.includes(getPropertyId(page, property)));
 }
 
 async function resolveDataSourceId(): Promise<string> {

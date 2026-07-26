@@ -25,6 +25,13 @@ const DATABASE_PROPERTIES = {
     featureImage: "Feature Image",
     publicationDate: "Publication Date",
     linkedinDiscussionUrl: "LinkedIn Discussion URL",
+    series: "Series",
+};
+
+const SERIES_PROPERTIES = {
+    title: "Name",
+    slug: "Slug",
+    description: "Description",
 };
 
 async function getChildPages(pageId) {
@@ -78,6 +85,7 @@ async function getLegacyChildPages(pageId) {
 async function getDatabasePosts(databaseId) {
     const pages = await queryDatabasePages(databaseId);
     const publicPages = pages.filter(isPublishedDatabasePage);
+    const seriesById = await getConfiguredSeriesById();
 
     return Promise.all(
         publicPages.map(async (page) => {
@@ -98,7 +106,7 @@ async function getDatabasePosts(databaseId) {
             const publishedDate = getDateProperty(page, DATABASE_PROPERTIES.publicationDate) || page.created_time || "";
             const linkedinDiscussionUrl = getLinkedInDiscussionUrlFromPage(page);
 
-            return {
+            const post = {
                 id: page.id,
                 tag,
                 title,
@@ -110,11 +118,20 @@ async function getDatabasePosts(databaseId) {
                 updatedDate: page.last_edited_time || "",
                 ...(linkedinDiscussionUrl ? { linkedinDiscussionUrl } : {}),
             };
+
+            return enrichPostWithSeries(post, page, seriesById);
         })
     );
 }
 
 async function queryDatabasePages(databaseId) {
+    return queryDataSourcePages(databaseId, [
+        { property: DATABASE_PROPERTIES.publicationDate, direction: "descending" },
+        { timestamp: "created_time", direction: "descending" },
+    ]);
+}
+
+async function queryDataSourcePages(databaseId, sorts = []) {
     const dataSourceId = await resolveDataSourceId(databaseId);
     const pages = [];
     let cursor;
@@ -124,10 +141,7 @@ async function queryDatabasePages(databaseId) {
             data_source_id: dataSourceId,
             page_size: 100,
             start_cursor: cursor,
-            sorts: [
-                { property: DATABASE_PROPERTIES.publicationDate, direction: "descending" },
-                { timestamp: "created_time", direction: "descending" },
-            ],
+            ...(sorts.length ? { sorts } : {}),
         });
         pages.push(...response.results);
         cursor = response.has_more ? response.next_cursor : undefined;
@@ -146,9 +160,61 @@ async function resolveDataSourceId(databaseOrDataSourceId) {
     }
 }
 
-function isPublishedDatabasePage(page) {
+export function isPublishedDatabasePage(page) {
     const property = page?.properties?.[DATABASE_PROPERTIES.published];
     return property?.type === "checkbox" && property.checkbox === true;
+}
+
+export async function getConfiguredSeriesById(queryPages = queryDataSourcePages) {
+    const seriesDatabaseId = process.env.NOTION_BLOG_SERIES_DATABASE_ID;
+    if (!seriesDatabaseId) {
+        return new Map();
+    }
+
+    try {
+        const seriesPages = await queryPages(seriesDatabaseId);
+        return buildSeriesById(seriesPages);
+    } catch (error) {
+        // A series is optional public metadata. Keep published posts available if
+        // the source has not been configured, shared, or migrated correctly yet.
+        console.warn("Unable to load blog series metadata; returning posts without series", {
+            message: error?.message || String(error),
+        });
+        return new Map();
+    }
+}
+
+export function buildSeriesById(seriesPages) {
+    const seriesById = new Map();
+    for (const page of Array.isArray(seriesPages) ? seriesPages : []) {
+        const name = getTitleFromPage(page);
+        const slug = normalizeSlug(getRichTextProperty(page, SERIES_PROPERTIES.slug));
+        if (!page?.id || !name || !slug) {
+            continue;
+        }
+
+        const description = getRichTextProperty(page, SERIES_PROPERTIES.description);
+        seriesById.set(page.id, {
+            name,
+            slug,
+            ...(description ? { description } : {}),
+        });
+    }
+    return seriesById;
+}
+
+export function getSeriesRelationId(page) {
+    const relation = page?.properties?.[DATABASE_PROPERTIES.series];
+    if (relation?.type !== "relation" || !Array.isArray(relation.relation)) {
+        return "";
+    }
+    return typeof relation.relation[0]?.id === "string" ? relation.relation[0].id : "";
+}
+
+export function enrichPostWithSeries(post, page, seriesById) {
+    const seriesId = getSeriesRelationId(page);
+    const series = seriesId && seriesById instanceof Map ? seriesById.get(seriesId) : null;
+    return series ? { ...post, series } : post;
 }
 
 function getTitleFromPage(page) {

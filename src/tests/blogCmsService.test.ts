@@ -29,12 +29,15 @@ const originalFetch = globalThis.fetch;
 const originalNotionDatabaseId = process.env.NOTION_DATABASE_ID;
 const originalNotionApiKey = process.env.NOTION_API_KEY;
 const originalOpenAiApiKey = process.env.OPENAI_API_KEY;
+const originalNotionBlogSeriesDatabaseId = process.env.NOTION_BLOG_SERIES_DATABASE_ID;
 
 afterEach(() => {
   globalThis.fetch = originalFetch;
   process.env.NOTION_DATABASE_ID = originalNotionDatabaseId;
   process.env.NOTION_API_KEY = originalNotionApiKey;
   process.env.OPENAI_API_KEY = originalOpenAiApiKey;
+  if (originalNotionBlogSeriesDatabaseId === undefined) delete process.env.NOTION_BLOG_SERIES_DATABASE_ID;
+  else process.env.NOTION_BLOG_SERIES_DATABASE_ID = originalNotionBlogSeriesDatabaseId;
   mockRefreshPublishedBlogData.mockReset();
   mockGetPageBodyMarkdown.mockReset();
 });
@@ -143,6 +146,56 @@ describe("blog CMS metadata helpers", () => {
       .resolves.toEqual({ actions: ["publicData"] });
 
     expect(mockRefreshPublishedBlogData).toHaveBeenCalledOnce();
+  });
+
+  it("refreshes public blog data when a published post changes its series relation", async () => {
+    process.env.NOTION_DATABASE_ID = "cms-data-source";
+    process.env.NOTION_API_KEY = "test-notion-key";
+    const page = cmsPage({ published: true, isLocked: true });
+    (page.properties as Record<string, unknown>).Series = { id: "series-property", relation: [{ id: "series-1" }] };
+    globalThis.fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify(page), { status: 200 }));
+
+    await expect(processCmsPagePropertyUpdate("page-123", ["series-property"]))
+      .resolves.toEqual({ actions: ["publicData"] });
+
+    expect(mockRefreshPublishedBlogData).toHaveBeenCalledOnce();
+  });
+
+  it("refreshes public blog data when a public Blog Series field changes", async () => {
+    process.env.NOTION_DATABASE_ID = "cms-data-source";
+    process.env.NOTION_BLOG_SERIES_DATABASE_ID = "series-data-source";
+    process.env.NOTION_API_KEY = "test-notion-key";
+    const seriesPage = {
+      id: "series-1",
+      parent: { type: "data_source_id", id: "series-data-source" },
+      properties: {
+        Name: { id: "series-name", title: [{ plain_text: "The Design of Research" }] },
+        Slug: { id: "series-slug", rich_text: [{ plain_text: "the-design-of-research" }] },
+        Description: { id: "series-description", rich_text: [] },
+      },
+    };
+    globalThis.fetch = vi.fn().mockResolvedValue(jsonResponse(seriesPage));
+
+    await expect(processCmsPagePropertyUpdate("series-1", ["series-description"]))
+      .resolves.toEqual({ actions: ["publicData"] });
+
+    expect(mockRefreshPublishedBlogData).toHaveBeenCalledOnce();
+  });
+
+  it("does not refresh for a series page when the series data source is not configured", async () => {
+    process.env.NOTION_DATABASE_ID = "cms-data-source";
+    process.env.NOTION_API_KEY = "test-notion-key";
+    const seriesPage = {
+      id: "series-1",
+      parent: { type: "data_source_id", id: "series-data-source" },
+      properties: { Name: { id: "series-name", title: [{ plain_text: "A series" }] } },
+    };
+    globalThis.fetch = vi.fn().mockResolvedValue(jsonResponse(seriesPage));
+
+    await expect(processCmsPagePropertyUpdate("series-1", ["series-name"]))
+      .resolves.toEqual({ actions: [] });
+
+    expect(mockRefreshPublishedBlogData).not.toHaveBeenCalled();
   });
 
   it("locks on publish and unlocks on normal unpublish", async () => {

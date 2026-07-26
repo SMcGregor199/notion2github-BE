@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   getBodyBlocksFromPageContent,
+  buildSeriesById,
   getDateProperty,
   getLinkedInDiscussionUrlFromPage,
+  enrichPostWithSeries,
+  getConfiguredSeriesById,
+  getSeriesRelationId,
   getValidLinkedInDiscussionUrl,
   getPageBodyMarkdown,
   isPublishedDatabasePage,
@@ -176,6 +180,73 @@ describe("Notion rich text serialization", () => {
     }, "Publication Date")).toBe("2026-01-10T13:58:01.000Z");
 
     expect(getDateProperty({ properties: {} }, "Publication Date")).toBe("");
+  });
+
+  it("enriches a published post with the related public series metadata", () => {
+    const seriesById = buildSeriesById([{
+      id: "series-1",
+      properties: {
+        Name: { type: "title", title: [{ plain_text: "The Design of Research" }] },
+        Slug: { type: "rich_text", rich_text: [{ plain_text: "the-design-of-research" }] },
+        Description: { type: "rich_text", rich_text: [{ plain_text: "How research takes shape." }] },
+      },
+    }]);
+    const page = {
+      properties: {
+        Published: { type: "checkbox", checkbox: true },
+        Series: { type: "relation", relation: [{ id: "series-1" }] },
+      },
+    };
+
+    expect(isPublishedDatabasePage(page)).toBe(true);
+    expect(getSeriesRelationId(page)).toBe("series-1");
+    expect(enrichPostWithSeries({ title: "Part one" }, page, seriesById)).toEqual({
+      title: "Part one",
+      series: {
+        name: "The Design of Research",
+        slug: "the-design-of-research",
+        description: "How research takes shape.",
+      },
+    });
+  });
+
+  it("keeps drafts and malformed or unavailable series records out of public series data", () => {
+    const draft = {
+      properties: {
+        Published: { type: "checkbox", checkbox: false },
+        Series: { type: "relation", relation: [{ id: "series-missing" }] },
+      },
+    };
+    const malformedSeries = buildSeriesById([{
+      id: "series-missing",
+      properties: {
+        Name: { type: "title", title: [{ plain_text: "Missing a slug" }] },
+        Slug: { type: "rich_text", rich_text: [] },
+      },
+    }]);
+
+    expect(isPublishedDatabasePage(draft)).toBe(false);
+    expect(malformedSeries.size).toBe(0);
+    expect(enrichPostWithSeries({ title: "Draft post" }, draft, malformedSeries)).toEqual({ title: "Draft post" });
+    expect(enrichPostWithSeries({ title: "No configured series" }, {
+      properties: { Series: { type: "relation", relation: [{ id: "series-1" }] } },
+    }, new Map())).toEqual({ title: "No configured series" });
+  });
+
+  it("omits series data when its source is absent or misconfigured", async () => {
+    const originalSeriesDatabaseId = process.env.NOTION_BLOG_SERIES_DATABASE_ID;
+    try {
+      delete process.env.NOTION_BLOG_SERIES_DATABASE_ID;
+      await expect(getConfiguredSeriesById()).resolves.toEqual(new Map());
+
+      process.env.NOTION_BLOG_SERIES_DATABASE_ID = "misconfigured-series-source";
+      await expect(getConfiguredSeriesById(async () => {
+        throw new Error("Notion data source unavailable");
+      })).resolves.toEqual(new Map());
+    } finally {
+      if (originalSeriesDatabaseId === undefined) delete process.env.NOTION_BLOG_SERIES_DATABASE_ID;
+      else process.env.NOTION_BLOG_SERIES_DATABASE_ID = originalSeriesDatabaseId;
+    }
   });
 
   it("accepts only HTTPS LinkedIn discussion URLs for public post data", () => {

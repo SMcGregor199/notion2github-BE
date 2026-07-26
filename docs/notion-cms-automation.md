@@ -10,6 +10,17 @@ The CMS uses Notion as the authoring surface and the backend Netlify site as the
 4. Check `Published` when the post is ready. Notion immediately calculates `Status` as `Live`; the connection webhook assigns `Publication Date` once, locks the page against accidental edits, and refreshes public blog/RSS data. Publishing does not create or change a newsletter.
 5. Review the generated Newsletter Intro, publish the LinkedIn discussion post and paste its URL, then click `Send Newsletter` to set the state to `Queued`. The connection webhook is the only send trigger; publishing never sends email.
 
+## Blog Series
+
+Create a `Blog Series` data source and add these exact properties:
+
+- `Name` — **Title**
+- `Slug` — **Text**; enter this once as the stable public URL identifier
+- `Description` — **Text**; optional
+- `Posts` — reciprocal **Relation** to `Blog CMS Posts`
+
+Then add a `Series` **Relation** property to `Blog CMS Posts`, pointed at `Blog Series`, and limit it to one related page. Assign a published post to a series by selecting that row. Public members are ordered by `Publication Date` ascending; drafts never appear on the series page or in its previous/next navigation. The launch series is `The Design of Research` with slug `the-design-of-research`.
+
 ### Revising a Live Post
 
 To revise a live post, open the page and choose **Locked → Unlock for everyone**. The connection webhook treats that intentional global unlock as an unpublish action: it clears `Published`, the `Status` formula returns to `Draft`, public blog/RSS data refreshes, and the page stays unlocked for editing. Do not use **Unlock for me** for this workflow; it keeps the global lock in place and does not reliably trigger the automation.
@@ -45,7 +56,7 @@ The newsletter requires a non-empty intro and a valid LinkedIn discussion URL. I
 
 ### Free-plan Connection Webhook
 
-1. In the [Notion Developer Portal](https://www.notion.so/profile/integrations), open the existing connection that owns `NOTION_API_KEY` and confirm it has access to `Blog CMS Posts` only.
+1. In the [Notion Developer Portal](https://www.notion.so/profile/integrations), open the existing connection that owns `NOTION_API_KEY` and confirm it has access to `Blog CMS Posts` and `Blog Series` only.
 2. Open the connection's **Webhooks** tab and create a subscription with this URL:
 
    `https://shaynemcgregordev-be.netlify.app/.netlify/functions/cms-notion-webhook`
@@ -54,7 +65,7 @@ The newsletter requires a non-empty intro and a valid LinkedIn discussion URL. I
 4. In the backend site's Netlify function logs, copy the received verification token. Add it as the private `NOTION_WEBHOOK_VERIFICATION_TOKEN` environment variable, redeploy the backend, and paste that same token into Notion's verification dialog.
 5. Confirm the subscription is active. Notion signs later events with this token; the backend rejects unsigned or invalid events.
 
-The public webhook verifies the signed Notion event, then starts a protected Netlify Background Function for long-running image generation and upload. Notion receives an immediate acknowledgement while the background job can continue safely. The webhook reacts when `Metadata State` changes to `Queued`, when `Published` changes, or when a page is globally unlocked. Changing `Published` to either checked or unchecked aligns the native page lock and refreshes public blog/RSS data. Globally unlocking a published post clears `Published` and refreshes public data.
+The public webhook verifies the signed Notion event, then starts a protected Netlify Background Function for long-running image generation and upload. Notion receives an immediate acknowledgement while the background job can continue safely. The webhook reacts when `Metadata State` changes to `Queued`, when `Published` changes, when a published post's `Series` relation changes, when a `Blog Series` name, slug, or description changes, or when a page is globally unlocked. Changing `Published` to either checked or unchecked aligns the native page lock and refreshes public blog/RSS data. Globally unlocking a published post clears `Published` and refreshes public data.
 
 ### Optional Paid-plan Automations
 
@@ -86,7 +97,7 @@ Set these private variables on the backend Netlify site before enabling the Noti
 - `CMS_IMAGE_QUALITY`: optional, defaults to `high`.
 - `NOTION_WEBHOOK_VERIFICATION_TOKEN`: required for the free-plan connection webhook; copy the one-time token from the verification request into this private variable before activating the subscription.
 
-`NOTION_API_KEY` must have access to `Blog CMS Posts`; `NOTION_DATABASE_ID` must remain set to the CMS data-source ID.
+`NOTION_API_KEY` must have access to `Blog CMS Posts` and `Blog Series`; `NOTION_DATABASE_ID` must remain set to the CMS data-source ID. Set `NOTION_BLOG_SERIES_DATABASE_ID` to the `Blog Series` data-source ID before assigning any series.
 
 ## Newsletter Setup and Activation
 
