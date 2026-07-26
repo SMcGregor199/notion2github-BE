@@ -8,6 +8,7 @@ const NOTION_API_BASE = "https://api.notion.com/v1";
 const OPENAI_API_BASE = "https://api.openai.com/v1";
 const NOTION_VERSION = "2026-03-11";
 const SUMMARY_MAX_LENGTH = 70;
+const NEWSLETTER_INTRO_MAX_LENGTH = 600;
 const BODY_MAX_LENGTH = 30_000;
 const slugify = slugifyModule as unknown as (value: string, options: { lower: boolean; strict: boolean }) => string;
 
@@ -38,6 +39,7 @@ export interface GeneratedMetadata {
   summary: string;
   tag: string;
   imageBrief: string;
+  newsletterIntro: string;
 }
 
 export interface CmsPage {
@@ -107,6 +109,10 @@ export function normalizeSummary(value: unknown): string {
   return normalized.slice(0, SUMMARY_MAX_LENGTH).replace(/[,:;\-\s]+$/, "");
 }
 
+export function normalizeNewsletterIntro(value: unknown): string {
+  return String(value || "").replace(/\s+/g, " ").trim().slice(0, NEWSLETTER_INTRO_MAX_LENGTH);
+}
+
 export function slugForTitle(title: string): string {
   return slugify(title.trim(), { lower: true, strict: true }) || "untitled-post";
 }
@@ -124,10 +130,11 @@ export function chooseUniqueSlug(baseSlug: string, existingSlugs: Iterable<strin
 export function buildMetadataPrompt(input: { title: string; markdown: string; existingTags: string[] }): string {
   return [
     "You prepare metadata for a personal engineering and technology blog.",
-    "Return JSON only with summary, tag, and imageBrief.",
+    "Return JSON only with summary, tag, imageBrief, and newsletterIntro.",
     `summary must be one punchy, accurate share-preview sentence no longer than ${SUMMARY_MAX_LENGTH} characters, with no markdown or quotation marks. Lead with the clearest compelling hook, use active language and a concrete insight or benefit, and avoid clickbait.`,
     "tag must be the single best category. Prefer one of the existing tags when it fits. Create a concise new category only when none fit.",
     "imageBrief must describe a single post-specific feature image subject; do not include typography, logos, brand names, or words to render.",
+    `newsletterIntro must be a warm, personal first-person opening of one or two sentences, no longer than ${NEWSLETTER_INTRO_MAX_LENGTH} characters. Explain why this post matters without restating the summary. Use plain text only: no markdown, greeting, subject line, or call to action.`,
     `Existing tags: ${input.existingTags.join(", ") || "none"}.`,
     `Title: ${input.title}`,
     "Article Markdown:",
@@ -190,7 +197,8 @@ async function initializeCmsMetadataForPage(page: CmsPage): Promise<{ pageId: st
     console.info("CMS metadata text generated", { pageId: page.id });
     const summary = normalizeSummary(metadata.summary);
     const tag = normalizeTag(metadata.tag);
-    if (!summary || !tag || !metadata.imageBrief.trim()) {
+    const newsletterIntro = normalizeNewsletterIntro(metadata.newsletterIntro);
+    if (!summary || !tag || !metadata.imageBrief.trim() || !newsletterIntro) {
       throw new CmsWorkflowError("OpenAI returned incomplete blog metadata.", 502);
     }
 
@@ -208,9 +216,13 @@ async function initializeCmsMetadataForPage(page: CmsPage): Promise<{ pageId: st
       [CMS_PROPERTIES.summary]: richTextProperty(summary),
       [CMS_PROPERTIES.tag]: { select: { name: tag } },
       [CMS_PROPERTIES.slug]: richTextProperty(slug),
+      [CMS_PROPERTIES.newsletterIntro]: richTextProperty(newsletterIntro),
       [CMS_PROPERTIES.featureImage]: {
         files: [{ type: "file_upload", name: `${slug}.webp`, file_upload: { id: fileUploadId } }],
       },
+      ...(getSelectValue(page, CMS_PROPERTIES.newsletterState)
+        ? {}
+        : { [CMS_PROPERTIES.newsletterState]: { select: { name: "Draft" } } }),
       ...metadataStateProperties("Ready", ""),
     });
     console.info("CMS metadata generation completed", { pageId: page.id });
@@ -390,11 +402,16 @@ async function generateMetadata(title: string, markdown: string, existingTags: s
           schema: {
             type: "object",
             additionalProperties: false,
-            required: ["summary", "tag", "imageBrief"],
+            required: ["summary", "tag", "imageBrief", "newsletterIntro"],
             properties: {
               summary: { type: "string" },
               tag: { type: "string" },
               imageBrief: { type: "string" },
+              newsletterIntro: {
+                type: "string",
+                maxLength: NEWSLETTER_INTRO_MAX_LENGTH,
+                description: "Warm, first-person plain-text newsletter opening in one or two sentences; no greeting, subject line, markdown, or call to action.",
+              },
             },
           },
         },

@@ -5,10 +5,10 @@ The CMS uses Notion as the authoring surface and the backend Netlify site as the
 ## New Post Workflow
 
 1. Add a new row to `Blog CMS Posts` and write the article in its page body.
-2. Click `Generate Metadata`.
-3. Wait for `Metadata State` to become `Ready`, then review the generated tag, summary, slug, and feature image.
+2. Click `Generate Post Assets`.
+3. Wait for `Metadata State` to become `Ready`, then review the generated tag, summary, slug, feature image, and Newsletter Intro.
 4. Check `Published` when the post is ready. Notion immediately calculates `Status` as `Live`; the connection webhook assigns `Publication Date` once, locks the page against accidental edits, and refreshes public blog/RSS data. Publishing does not create or change a newsletter.
-5. When you begin a newsletter by entering `Newsletter Intro`, the connection webhook sets `Newsletter State` to `Draft`. Clearing an unsent draft intro returns that state to blank. Write and review the intro, publish the LinkedIn discussion post and paste its URL, then use `Send Newsletter` to set the state to `Queued`. The connection webhook is the only send trigger; publishing never sends email.
+5. Review the generated Newsletter Intro, publish the LinkedIn discussion post and paste its URL, then click `Send Newsletter` to set the state to `Queued`. The connection webhook is the only send trigger; publishing never sends email.
 
 ### Revising a Live Post
 
@@ -20,13 +20,13 @@ Notion database buttons and database automations must be configured in the Notio
 
 Create a default database template named `New Blog Draft` with `Published` unchecked and `Metadata State` set to `New`. Notion calculates `Status` as `Draft`. Use that template for every new row.
 
-### Generate Metadata Button
+### Generate Post Assets Button
 
-1. Add a `Generate Metadata` property of type **Button**.
+1. Rename the existing `Generate Metadata` property to `Generate Post Assets`.
 2. Configure the button to edit **This page**, set `Metadata State` to `Queued`, and clear `Metadata Error`.
 3. Save. Do not add a **Send webhook** action or an automation: Notion's connection webhook receives the property change automatically.
 
-Clicking the button again regenerates and replaces the tag, summary, slug, and feature image. When the title has not changed, the slug remains the same.
+Clicking the button again regenerates and replaces the tag, summary, slug, feature image, and Newsletter Intro. When the title has not changed, the slug remains the same. Generation sets a blank `Newsletter State` to `Draft` in the same update, but preserves any existing state, including `Sent`.
 
 ### Newsletter Properties and Send Button
 
@@ -111,4 +111,4 @@ The new endpoint set is `newsletter-subscribe`, `newsletter-confirm`, `resend-we
 
 ## Failure Recovery
 
-If a generation fails, the post remains unpublished, `Metadata State` becomes `Failed`, and `Metadata Error` contains the reason. Correct the title/content or environment configuration, then click `Generate Metadata` again.
+If a generation fails, the post remains unpublished, `Metadata State` becomes `Failed`, and `Metadata Error` contains the reason. Correct the title/content or environment configuration, then click `Generate Post Assets` again.

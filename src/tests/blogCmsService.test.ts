@@ -1,9 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const mockRefreshPublishedBlogData = vi.hoisted(() => vi.fn());
+const mockGetPageBodyMarkdown = vi.hoisted(() => vi.fn());
 
 vi.mock("../../utils/fetchAndStoreLatestData.js", () => ({
   default: mockRefreshPublishedBlogData,
+}));
+
+vi.mock("../../utils/helper.js", () => ({
+  getPageBodyMarkdown: mockGetPageBodyMarkdown,
 }));
 
 import {
@@ -11,6 +16,8 @@ import {
   buildMetadataPrompt,
   chooseUniqueSlug,
   extractCmsRecordId,
+  initializeCmsMetadata,
+  normalizeNewsletterIntro,
   normalizeSummary,
   processCmsPagePropertyUpdate,
   processCmsPageUnlocked,
@@ -21,12 +28,15 @@ import {
 const originalFetch = globalThis.fetch;
 const originalNotionDatabaseId = process.env.NOTION_DATABASE_ID;
 const originalNotionApiKey = process.env.NOTION_API_KEY;
+const originalOpenAiApiKey = process.env.OPENAI_API_KEY;
 
 afterEach(() => {
   globalThis.fetch = originalFetch;
   process.env.NOTION_DATABASE_ID = originalNotionDatabaseId;
   process.env.NOTION_API_KEY = originalNotionApiKey;
+  process.env.OPENAI_API_KEY = originalOpenAiApiKey;
   mockRefreshPublishedBlogData.mockReset();
+  mockGetPageBodyMarkdown.mockReset();
 });
 
 describe("blog CMS metadata helpers", () => {
@@ -40,6 +50,12 @@ describe("blog CMS metadata helpers", () => {
   it("normalizes preview-card summaries to a single bounded sentence", () => {
     expect(normalizeSummary("  A concise\n\nsummary.  ")).toBe("A concise summary.");
     expect(normalizeSummary("x".repeat(220))).toHaveLength(70);
+  });
+
+  it("normalizes generated newsletter intros to plain bounded text", () => {
+    expect(normalizeNewsletterIntro("  I built this\n\nfor people who need a clearer path.  "))
+      .toBe("I built this for people who need a clearer path.");
+    expect(normalizeNewsletterIntro("x".repeat(700))).toHaveLength(600);
   });
 
   it("creates deterministic slugs and resolves only real collisions", () => {
@@ -62,11 +78,52 @@ describe("blog CMS metadata helpers", () => {
 
     expect(metadataPrompt).toContain("Engineering, Performance");
     expect(metadataPrompt).toContain("punchy, accurate share-preview sentence no longer than 70 characters");
+    expect(metadataPrompt).toContain("warm, personal first-person opening of one or two sentences");
+    expect(metadataPrompt).toContain("no longer than 600 characters");
+    expect(metadataPrompt).toContain("no markdown, greeting, subject line, or call to action");
     expect(imagePrompt).toContain("spacey hip-hop and cyberpunk editorial art");
     expect(imagePrompt).toContain("centered square safe area");
     expect(imagePrompt).toContain("central two-thirds of the canvas width");
     expect(imagePrompt).toContain("Do not render words");
     expect(imagePrompt).toContain("cache node");
+  });
+
+  it("generates a newsletter intro, requires it in the strict schema, and creates a draft when blank", async () => {
+    const page = generationPage();
+    const fetchMock = mockGenerationFetch(page);
+
+    await expect(initializeCmsMetadata(9)).resolves.toEqual({ pageId: "page-123", skipped: false });
+
+    const openAiRequest = fetchMock.mock.calls.find(([url]) => String(url).endsWith("/responses"));
+    const schema = JSON.parse(String(openAiRequest?.[1]?.body)).text.format.schema;
+    expect(schema.required).toContain("newsletterIntro");
+    expect(schema.properties.newsletterIntro).toMatchObject({
+      type: "string",
+      maxLength: 600,
+    });
+
+    expect(generationUpdate(fetchMock)).toMatchObject({
+      properties: {
+        "Newsletter Intro": {
+          rich_text: [{ type: "text", text: { content: "I've been thinking about how small engineering choices compound over time." } }],
+        },
+        "Newsletter State": { select: { name: "Draft" } },
+        "Metadata State": { select: { name: "Ready" } },
+      },
+    });
+  });
+
+  it("replaces a generated newsletter intro without changing an existing newsletter state", async () => {
+    const page = generationPage({ newsletterIntro: "Older intro.", newsletterState: "Sent" });
+    const fetchMock = mockGenerationFetch(page);
+
+    await initializeCmsMetadata(9);
+
+    const properties = generationUpdate(fetchMock).properties;
+    expect(properties["Newsletter Intro"]).toEqual({
+      rich_text: [{ type: "text", text: { content: "I've been thinking about how small engineering choices compound over time." } }],
+    });
+    expect(properties).not.toHaveProperty("Newsletter State");
   });
 
   it("refreshes public blog data when a published post receives a LinkedIn discussion URL", async () => {
@@ -223,6 +280,7 @@ function cmsPage(input: { id?: string; published: boolean; isLocked: boolean; pu
     is_locked: input.isLocked,
     parent: { type: "data_source_id", id: "cms-data-source" },
     properties: {
+      Name: { title: [{ plain_text: "A Better Cache" }] },
       Published: { id: "published-property", checkbox: input.published },
       "Publication Date": { date: input.publicationDate ? { start: input.publicationDate } : null },
       "Newsletter Intro": {
@@ -232,6 +290,68 @@ function cmsPage(input: { id?: string; published: boolean; isLocked: boolean; pu
       "Newsletter State": { select: input.newsletterState ? { name: input.newsletterState } : null },
     },
   };
+}
+
+function generationPage(input: { newsletterState?: string; newsletterIntro?: string } = {}) {
+  return {
+    ...cmsPage({ published: false, isLocked: false, ...input }),
+    properties: {
+      ...cmsPage({ published: false, isLocked: false, ...input }).properties,
+      "Metadata State": { select: { name: "Queued" } },
+    },
+  };
+}
+
+function mockGenerationFetch(page: ReturnType<typeof generationPage>) {
+  process.env.NOTION_DATABASE_ID = "cms-data-source";
+  process.env.NOTION_API_KEY = "test-notion-key";
+  process.env.OPENAI_API_KEY = "test-openai-key";
+  mockGetPageBodyMarkdown.mockResolvedValue("## The problem\n\nCaching was slow.");
+
+  const fetchMock = vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
+    const requestUrl = String(url);
+    if (requestUrl.endsWith("/data_sources/cms-data-source/query")) {
+      const body = String(init?.body || "");
+      return jsonResponse(body.includes("CMS Record ID")
+        ? { results: [page], has_more: false }
+        : { results: [], has_more: false });
+    }
+    if (requestUrl.endsWith("/data_sources/cms-data-source")) {
+      return jsonResponse({ properties: { Tag: { select: { options: [{ name: "Engineering" }] } } } });
+    }
+    if (requestUrl.endsWith("/responses")) {
+      return jsonResponse({
+        output_text: JSON.stringify({
+          summary: "A practical look at making cache decisions clearer.",
+          tag: "Engineering",
+          imageBrief: "A cache node accelerating through a glowing data tunnel.",
+          newsletterIntro: "I've been thinking about how small engineering choices compound over time.",
+        }),
+      });
+    }
+    if (requestUrl.endsWith("/images/generations")) {
+      return jsonResponse({ data: [{ b64_json: "aW1hZ2U=" }] });
+    }
+    if (requestUrl.endsWith("/file_uploads")) {
+      return jsonResponse({ id: "upload-123", upload_url: "https://uploads.example.test/upload-123" });
+    }
+    if (requestUrl === "https://uploads.example.test/upload-123") {
+      return new Response(null, { status: 200 });
+    }
+    if (requestUrl.endsWith("/pages/page-123")) {
+      return new Response(null, { status: 200 });
+    }
+    throw new Error(`Unexpected fetch request: ${requestUrl}`);
+  });
+  globalThis.fetch = fetchMock;
+  return fetchMock;
+}
+
+function generationUpdate(fetchMock: ReturnType<typeof vi.fn>) {
+  const update = [...fetchMock.mock.calls]
+    .reverse()
+    .find(([url, init]) => String(url).endsWith("/pages/page-123") && init?.method === "PATCH");
+  return JSON.parse(String(update?.[1]?.body));
 }
 
 function jsonResponse(value: unknown): Response {
