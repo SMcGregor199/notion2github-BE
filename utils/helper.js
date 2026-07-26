@@ -160,7 +160,7 @@ async function resolveDataSourceId(databaseOrDataSourceId) {
     }
 }
 
-export function isPublishedDatabasePage(page) {
+function isPublishedDatabasePage(page) {
     const property = page?.properties?.[DATABASE_PROPERTIES.published];
     return property?.type === "checkbox" && property.checkbox === true;
 }
