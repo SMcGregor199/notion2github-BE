@@ -2,6 +2,10 @@
 
 Node/TypeScript backend and Netlify Functions layer for `shaynemcgregor.dev`.
 
+## Production Releases
+
+This Netlify site shares one production-deploy budget with the frontend and every other Personal-team site. Use feature PRs and review their Deploy Previews; merge only planned release batches into `main`. The single counter and complete checklist live in the frontend repository's [Netlify release guide](https://github.com/SMcGregor199/notion2github-FE/blob/main/NETLIFY_RELEASE_GUIDE.md).
+
 ## What This Repo Does
 
 - Reads Notion child pages.
