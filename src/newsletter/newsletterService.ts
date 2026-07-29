@@ -122,7 +122,7 @@ export async function sendNewsletterForPageId(pageId: string): Promise<{ sent: b
   const state = getSelect(page, NEWSLETTER_PROPERTIES.state) as NewsletterState | "";
   const existingBroadcastId = getRichText(page, NEWSLETTER_PROPERTIES.broadcastId);
   const sentAt = getDate(page, NEWSLETTER_PROPERTIES.sentAt);
-  if (state === "Sent" || sentAt || existingBroadcastId) {
+  if (state === "Sent" || sentAt) {
     if (state !== "Sent") await updateNotionPage(page.id, { [NEWSLETTER_PROPERTIES.state]: selectProperty("Sent") });
     return { sent: false, broadcastId: existingBroadcastId || undefined };
   }
@@ -149,21 +149,37 @@ export async function sendNewsletterForPageId(pageId: string): Promise<{ sent: b
     const imageUrl = await newsletterImageUrl(page);
     if (!imageUrl) throw new NewsletterError("BACKEND_ORIGIN is required to include the feature image in newsletter delivery.", 500);
     const html = renderNewsletterEmail({ intro, title, summary, slug, imageUrl, linkedinUrl });
-    const broadcast = await resendRequest<{ id?: string }>("/broadcasts", {
-      method: "POST",
-      headers: { "Idempotency-Key": `newsletter-${page.id}` },
-      body: JSON.stringify({
-        segment_id: requiredEnv("RESEND_BLOG_UPDATES_SEGMENT_ID"),
-        topic_id: requiredEnv("RESEND_BLOG_UPDATES_TOPIC_ID"),
-        from: process.env.RESEND_FROM_EMAIL || "Shayne McGregor <updates@shaynemcgregor.dev>",
-        reply_to: process.env.RESEND_REPLY_TO || "updates@shaynemcgregor.dev",
-        subject: title,
-        html,
-      }),
-    });
-    if (!broadcast?.id) throw new NewsletterError("Resend did not return a broadcast ID.", 502);
-    const broadcastId = broadcast.id;
-    await updateNotionPage(page.id, { [NEWSLETTER_PROPERTIES.broadcastId]: richTextProperty(broadcastId) });
+    let broadcastId = existingBroadcastId;
+    if (broadcastId) {
+      const existingBroadcast = await resendRequest<{ status?: unknown }>(`/broadcasts/${encodeURIComponent(broadcastId)}`, { method: "GET" });
+      if (existingBroadcast?.status === "sent") {
+        await updateNotionPage(page.id, {
+          [NEWSLETTER_PROPERTIES.state]: selectProperty("Sent"),
+          [NEWSLETTER_PROPERTIES.sentAt]: dateProperty(new Date().toISOString()),
+          [NEWSLETTER_PROPERTIES.error]: richTextProperty(""),
+        });
+        return { sent: false, broadcastId };
+      }
+      if (existingBroadcast?.status !== "draft") {
+        throw new NewsletterError(`Resend broadcast is ${String(existingBroadcast?.status || "in an unknown state")} and cannot be sent automatically.`, 502);
+      }
+    } else {
+      const broadcast = await resendRequest<{ id?: string }>("/broadcasts", {
+        method: "POST",
+        headers: { "Idempotency-Key": `newsletter-${page.id}` },
+        body: JSON.stringify({
+          segment_id: requiredEnv("RESEND_BLOG_UPDATES_SEGMENT_ID"),
+          topic_id: requiredEnv("RESEND_BLOG_UPDATES_TOPIC_ID"),
+          from: process.env.RESEND_FROM_EMAIL || "Shayne McGregor <updates@shaynemcgregor.dev>",
+          reply_to: process.env.RESEND_REPLY_TO || "updates@shaynemcgregor.dev",
+          subject: title,
+          html,
+        }),
+      });
+      if (!broadcast?.id) throw new NewsletterError("Resend did not return a broadcast ID.", 502);
+      broadcastId = broadcast.id;
+      await updateNotionPage(page.id, { [NEWSLETTER_PROPERTIES.broadcastId]: richTextProperty(broadcastId) });
+    }
     await resendRequest(`/broadcasts/${encodeURIComponent(broadcastId)}/send`, { method: "POST", body: "{}" });
     await updateNotionPage(page.id, {
       [NEWSLETTER_PROPERTIES.state]: selectProperty("Sent"),
@@ -347,8 +363,16 @@ async function notionRequest<T = unknown>(path: string, init: RequestInit = {}):
 async function resendRequest<T = unknown>(path: string, init: RequestInit, allowNotFound = false): Promise<T | null> {
   const response = await fetch(`${RESEND_API_BASE}${path}`, { ...init, headers: { Authorization: `Bearer ${requiredEnv("RESEND_API_KEY")}`, "Content-Type": "application/json", ...init.headers } });
   if (allowNotFound && response.status === 404) return null;
-  if (!response.ok) throw new NewsletterError(`Resend API request failed (${response.status}).`, 502);
+  if (!response.ok) throw new NewsletterError(await resendFailure(response), 502);
   return response.status === 204 ? undefined as T : response.json() as Promise<T>;
+}
+
+async function resendFailure(response: Response): Promise<string> {
+  const responseBody = await response.json().catch(() => null) as Record<string, unknown> | null;
+  const detail = responseBody && typeof responseBody.message === "string" ? normalizeText(responseBody.message, 500) : "";
+  const requestId = response.headers.get("x-request-id") || response.headers.get("x-resend-request-id");
+  const requestNote = requestId ? `; request ${requestId}` : "";
+  return `Resend API request failed (${response.status}${requestNote})${detail ? `: ${detail}` : "."}`;
 }
 
 function getProperty(page: NotionPage, name: string): Record<string, any> { return page.properties[name] || {}; }

@@ -8,6 +8,12 @@ import {
   sendNewsletterForPageId,
 } from "../newsletter/newsletterService.js";
 
+vi.mock("../../utils/notionPublicImages.js", () => ({
+  createStableImageId: () => "newsletter-image-123",
+  publicImageUrlForImageId: () => "https://images.example/newsletter-image-123",
+  registerNotionImageSource: async () => undefined,
+}));
+
 describe("newsletter service helpers", () => {
   afterEach(() => {
     delete process.env.RESEND_WEBHOOK_SECRET;
@@ -74,6 +80,50 @@ describe("newsletter service helpers", () => {
     await expect(sendNewsletterForPageId("post-123")).resolves.toEqual({ sent: false, broadcastId: "broadcast-123" });
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(String(fetchMock.mock.calls[0]?.[0])).toContain("https://api.notion.com/v1/pages/post-123");
+  });
+
+  it("resumes a recorded draft broadcast instead of falsely marking it sent", async () => {
+    process.env.NOTION_API_KEY = "notion-test-key";
+    process.env.RESEND_API_KEY = "resend-test-key";
+    const page = newsletterPage({
+      "Newsletter State": { select: { name: "Queued" } },
+      "Newsletter Broadcast ID": { rich_text: [{ plain_text: "broadcast-123" }] },
+    });
+    const fetchMock = vi.fn(async (url: string | URL, init?: RequestInit) => {
+      const target = String(url);
+      if (target === "https://api.notion.com/v1/pages/post-123") {
+        return init?.method === "PATCH" ? new Response(null, { status: 204 }) : Response.json(page);
+      }
+      if (target === "https://api.resend.com/broadcasts/broadcast-123" && init?.method === "GET") return Response.json({ id: "broadcast-123", status: "draft" });
+      if (target === "https://api.resend.com/broadcasts/broadcast-123/send" && init?.method === "POST") return Response.json({ id: "broadcast-123" });
+      throw new Error(`Unexpected request: ${target}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(sendNewsletterForPageId("post-123")).resolves.toEqual({ sent: true, broadcastId: "broadcast-123" });
+    expect(fetchMock.mock.calls.some(([url]) => String(url) === "https://api.resend.com/broadcasts")).toBe(false);
+    expect(fetchMock.mock.calls.some(([url]) => String(url) === "https://api.resend.com/broadcasts/broadcast-123/send")).toBe(true);
+  });
+
+  it("records Resend's safe error message when a broadcast cannot be created", async () => {
+    process.env.NOTION_API_KEY = "notion-test-key";
+    process.env.RESEND_API_KEY = "resend-test-key";
+    process.env.RESEND_BLOG_UPDATES_SEGMENT_ID = "segment-123";
+    process.env.RESEND_BLOG_UPDATES_TOPIC_ID = "topic-123";
+    const page = newsletterPage();
+    const fetchMock = vi.fn(async (url: string | URL, init?: RequestInit) => {
+      const target = String(url);
+      if (target === "https://api.notion.com/v1/pages/post-123") {
+        return init?.method === "PATCH" ? new Response(null, { status: 204 }) : Response.json(page);
+      }
+      if (target === "https://api.resend.com/broadcasts" && init?.method === "POST") {
+        return Response.json({ message: "Broadcast delivery is temporarily unavailable." }, { status: 500, headers: { "x-request-id": "req_123" } });
+      }
+      throw new Error(`Unexpected request: ${target}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(sendNewsletterForPageId("post-123")).rejects.toThrow("Resend API request failed (500; request req_123): Broadcast delivery is temporarily unavailable.");
   });
 
   it("alerts the owner only after a valid subscription confirmation", async () => {
@@ -156,6 +206,24 @@ function subscriberPage(tokenHash: string) {
       "Confirmation Token Hash": { rich_text: [{ plain_text: tokenHash }] },
       "Confirmation Token Expires At": { date: { start: "2099-01-01T00:00:00.000Z" } },
       "Resend Contact ID": { rich_text: [] },
+    },
+  };
+}
+
+function newsletterPage(overrides: Record<string, unknown> = {}) {
+  return {
+    id: "post-123",
+    properties: {
+      Name: { title: [{ plain_text: "A better cache" }] },
+      Summary: { rich_text: [{ plain_text: "What changed." }] },
+      Slug: { rich_text: [{ plain_text: "better-cache" }] },
+      "Feature Image": { files: [{ external: { url: "https://images.example/cache.png" } }] },
+      "Newsletter Intro": { rich_text: [{ plain_text: "Hello readers." }] },
+      "LinkedIn Discussion URL": { url: "https://www.linkedin.com/posts/example" },
+      "Newsletter State": { select: { name: "Queued" } },
+      "Newsletter Broadcast ID": { rich_text: [] },
+      "Newsletter Sent At": { date: null },
+      ...overrides,
     },
   };
 }
