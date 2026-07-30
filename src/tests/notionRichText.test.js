@@ -253,6 +253,9 @@ describe("Notion rich text serialization", () => {
     expect(getValidLinkedInDiscussionUrl(" https://www.linkedin.com/posts/example_123 ")).toBe(
       "https://www.linkedin.com/posts/example_123",
     );
+    expect(getValidLinkedInDiscussionUrl("https://lnkd.in/p/example_123")).toBe(
+      "https://lnkd.in/p/example_123",
+    );
     expect(getValidLinkedInDiscussionUrl("http://www.linkedin.com/posts/example")).toBe("");
     expect(getValidLinkedInDiscussionUrl("https://linkedin.example.com/posts/example")).toBe("");
     expect(getValidLinkedInDiscussionUrl("https://www.linkedin.com@evil.example/posts/example")).toBe("");
@@ -265,6 +268,11 @@ describe("Notion rich text serialization", () => {
         "LinkedIn Discussion URL": { type: "url", url: "https://www.linkedin.com/posts/example_123" },
       },
     })).toBe("https://www.linkedin.com/posts/example_123");
+    expect(getLinkedInDiscussionUrlFromPage({
+      properties: {
+        "LinkedIn Discussion URL": { type: "url", url: "https://lnkd.in/p/example_123" },
+      },
+    })).toBe("https://lnkd.in/p/example_123");
     expect(getLinkedInDiscussionUrlFromPage({ properties: {} })).toBe("");
     expect(getLinkedInDiscussionUrlFromPage({
       properties: {
