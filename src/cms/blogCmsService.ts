@@ -3,6 +3,7 @@ import slugifyModule from "slugify";
 // @ts-expect-error This established runtime utility is JavaScript-only.
 import { getPageBodyMarkdown } from "../../utils/helper.js";
 import { NEWSLETTER_PROPERTIES, sendNewsletterForPageId } from "../newsletter/newsletterService.js";
+import { generateSocialDraftsForPageId, SOCIAL_DRAFT_PROPERTIES } from "./socialDraftService.js";
 
 const NOTION_API_BASE = "https://api.notion.com/v1";
 const OPENAI_API_BASE = "https://api.openai.com/v1";
@@ -30,9 +31,11 @@ export const CMS_PROPERTIES = {
   newsletterSentAt: NEWSLETTER_PROPERTIES.sentAt,
   newsletterError: NEWSLETTER_PROPERTIES.error,
   newsletterBroadcastId: NEWSLETTER_PROPERTIES.broadcastId,
+  socialDraftState: SOCIAL_DRAFT_PROPERTIES.cmsState,
+  socialDraftError: SOCIAL_DRAFT_PROPERTIES.cmsError,
 } as const;
 
-type CmsWebhookAction = "metadata" | "publication" | "publicData" | "newsletterDraft" | "newsletter";
+type CmsWebhookAction = "metadata" | "socialDrafts" | "publication" | "publicData" | "newsletterDraft" | "newsletter";
 
 export type MetadataState = "New" | "Queued" | "Processing" | "Ready" | "Failed";
 
@@ -265,6 +268,14 @@ export async function processCmsPagePropertyUpdate(
   ) {
     await initializeCmsMetadataForPage(page);
     actions.push("metadata");
+  }
+
+  if (
+    changed.has(getPropertyId(page, CMS_PROPERTIES.socialDraftState))
+    && getSelectValue(page, CMS_PROPERTIES.socialDraftState) === "Queued"
+  ) {
+    await generateSocialDraftsForPageId(page.id);
+    actions.push("socialDrafts");
   }
 
   const publicationChanged = changed.has(getPropertyId(page, CMS_PROPERTIES.published));
