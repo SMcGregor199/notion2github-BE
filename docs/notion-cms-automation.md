@@ -7,8 +7,10 @@ The CMS uses Notion as the authoring surface and the backend Netlify site as the
 1. Add a new row to `Blog CMS Posts` and write the article in its page body.
 2. Click `Generate Post Assets`.
 3. Wait for `Metadata State` to become `Ready`, then review the generated tag, summary, slug, feature image, and Newsletter Intro.
-4. Check `Published` when the post is ready. Notion immediately calculates `Status` as `Live`; the connection webhook assigns `Publication Date` once, locks the page against accidental edits, and refreshes public blog/RSS data. Publishing does not create or change a newsletter.
-5. Review the generated Newsletter Intro, publish the LinkedIn discussion post and paste its URL, then click `Send Newsletter` to set the state to `Queued`. The connection webhook is the only send trigger; publishing never sends email.
+4. Click `Generate Social Drafts`. Wait for `Social Draft State` to become `Ready`, then review and edit the six new rows in `Social Post Drafts`. This step does not publish or schedule anything.
+5. Check `Published` when the essay is ready. Notion immediately calculates `Status` as `Live`; the connection webhook assigns `Publication Date` once, locks the page against accidental edits, and refreshes public blog/RSS data. Publishing does not create or change a newsletter or social post.
+6. Manually publish the reviewed social copy. Mark each published social row `Published`, then add its `Published at` date and `Publication URL`. For the LinkedIn launch post, also paste its URL into the essay's `LinkedIn Discussion URL` before sending the newsletter.
+7. Review the generated Newsletter Intro, then click `Send Newsletter` to set the state to `Queued`. The connection webhook is the only send trigger; publishing the essay or social copy never sends email.
 
 ## Blog Series
 
@@ -29,7 +31,7 @@ To revise a live post, open the page and choose **Locked → Unlock for everyone
 
 Notion database buttons and database automations must be configured in the Notion UI; the Notion API does not expose their configuration. The Free-plan workflow below uses a Notion API connection webhook, not Notion's paid **Send webhook** automation action.
 
-Create a default database template named `New Blog Draft` with `Published` unchecked and `Metadata State` set to `New`. Notion calculates `Status` as `Draft`. Use that template for every new row.
+Create a default database template named `New Blog Draft` with `Published` unchecked, `Metadata State` set to `New`, and `Social Draft State` set to `New`. Notion calculates `Status` as `Draft`. Use that template for every new row.
 
 ### Generate Post Assets Button
 
@@ -38,6 +40,46 @@ Create a default database template named `New Blog Draft` with `Published` unche
 3. Save. Do not add a **Send webhook** action or an automation: Notion's connection webhook receives the property change automatically.
 
 Clicking the button again regenerates and replaces the tag, summary, slug, feature image, and Newsletter Intro. When the title has not changed, the slug remains the same. Generation sets a blank `Newsletter State` to `Draft` in the same update, but preserves any existing state, including `Sent`.
+
+### Social Post Drafts Database and Button
+
+Under `Blogging`, create a `Social Post Drafts` data source with these exact properties:
+
+- `Name` — **Title**
+- `Platform` — **Select** with `LinkedIn` and `Substack`
+- `Sequence` — **Select** with `Launch`, `Follow-up 1`, and `Follow-up 2`
+- `Status` — **Select** with `Draft`, `Published`, and `Superseded`
+- `Blog CMS post` — **Relation** to `Blog CMS Posts`
+- `Blog series` — **Relation** to `Blog Series`
+- `Published at` — **Date**
+- `Publication URL` — **URL**
+- `Origin` — **Select** with `Generated` and `Backfilled`
+
+The editable social copy belongs in each page body, not in a database property. Share this data source with the existing Notion integration. The backend validates these exact property names and types before asking the model for copy.
+
+Add these properties to `Blog CMS Posts`:
+
+- `Social Draft State` — **Select** with `New`, `Queued`, `Processing`, `Ready`, and `Failed`
+- `Social Draft Error` — **Text**
+- `Generate Social Drafts` — **Button**
+
+Configure `Generate Social Drafts` to edit **This page**, set `Social Draft State` to `Queued`, and clear `Social Draft Error`. Do not add a paid automation, direct webhook action, schedule, publishing action, or Publishing Calendar update. The existing Notion connection webhook receives the property change automatically.
+
+Generation requires the CMS row to have a title, non-empty article body, and slug. `Generate Post Assets` normally supplies the slug, so run and review that workflow first. One request produces exactly six `Draft` rows: a LinkedIn/Substack launch pair, useful-idea pair, and question/reflection pair. Every row links back to the CMS post and copies its optional series relation. Each pair shares an angle but has platform-specific copy, including the canonical `https://shaynemcgregor.dev/blog/<slug>` URL.
+
+Generated rows are review material only. The workflow does not update the Publishing Calendar, schedule a post, call LinkedIn or Substack, publish the essay, or send a newsletter.
+
+#### Archive Backfill and Voice References
+
+Backfill the exact published copy for the first two essays by creating one row per actual LinkedIn or Substack post. Paste the copy verbatim into the page body, set `Origin` to `Backfilled` and `Status` to `Published`, and fill the platform, sequence, CMS-post relation, series relation, published date, and publication URL. Do not reconstruct the copy from screenshots or older drafts. The reset Note may be added as an optional standalone `Published`/`Backfilled` reference; leave relations empty when it is not tied to an essay or series.
+
+Only rows whose current `Status` is `Published` are eligible voice references. The generator prioritizes up to six recent published examples from the same platform and series, then fills the remaining reference slots with recent published examples from that platform. Generated `Draft` rows and `Superseded` rows are never used as voice examples.
+
+After manually publishing future copy, update that row's `Status` to `Published` and add `Published at` and `Publication URL`. This is the review gate that allows the final copy to teach later generations.
+
+#### Regeneration
+
+Generation refuses to run while any `Draft` or `Published` social row remains linked to the CMS post. It never overwrites page-body copy. To generate a replacement set, first mark every prior linked row `Superseded`, then click `Generate Social Drafts` again. The CMS row moves to `Failed` with a reviewable error if active rows remain.
 
 ### Newsletter Properties and Send Button
 
@@ -56,7 +98,7 @@ The newsletter requires a non-empty intro and a valid LinkedIn discussion URL. I
 
 ### Free-plan Connection Webhook
 
-1. In the [Notion Developer Portal](https://www.notion.so/profile/integrations), open the existing connection that owns `NOTION_API_KEY` and confirm it has access to `Blog CMS Posts` and `Blog Series` only.
+1. In the [Notion Developer Portal](https://www.notion.so/profile/integrations), open the existing connection that owns `NOTION_API_KEY` and confirm it has access to `Blog CMS Posts`, `Blog Series`, and `Social Post Drafts`.
 2. Open the connection's **Webhooks** tab and create a subscription with this URL:
 
    `https://shaynemcgregordev-be.netlify.app/.netlify/functions/cms-notion-webhook`
@@ -65,7 +107,7 @@ The newsletter requires a non-empty intro and a valid LinkedIn discussion URL. I
 4. In the backend site's Netlify function logs, copy the received verification token. Add it as the private `NOTION_WEBHOOK_VERIFICATION_TOKEN` environment variable, redeploy the backend, and paste that same token into Notion's verification dialog.
 5. Confirm the subscription is active. Notion signs later events with this token; the backend rejects unsigned or invalid events.
 
-The public webhook verifies the signed Notion event, then starts a protected Netlify Background Function for long-running image generation and upload. Notion receives an immediate acknowledgement while the background job can continue safely. The webhook reacts when `Metadata State` changes to `Queued`, when `Published` changes, when a published post's `Series` relation changes, when a `Blog Series` name, slug, or description changes, or when a page is globally unlocked. Changing `Published` to either checked or unchecked aligns the native page lock and refreshes public blog/RSS data. Globally unlocking a published post clears `Published` and refreshes public data.
+The public webhook verifies the signed Notion event, then starts a protected Netlify Background Function for long-running generation work. Notion receives an immediate acknowledgement while the background job can continue safely. The webhook reacts when `Metadata State` or `Social Draft State` changes to `Queued`, when `Published` changes, when a published post's `Series` relation changes, when a `Blog Series` name, slug, or description changes, or when a page is globally unlocked. Changing `Published` to either checked or unchecked aligns the native page lock and refreshes public blog/RSS data. Globally unlocking a published post clears `Published` and refreshes public data.
 
 ### Optional Paid-plan Automations
 
@@ -96,8 +138,9 @@ Set these private variables on the backend Netlify site before enabling the Noti
 - `CMS_IMAGE_MODEL`: optional, defaults to `gpt-image-2`.
 - `CMS_IMAGE_QUALITY`: optional, defaults to `high`.
 - `NOTION_WEBHOOK_VERIFICATION_TOKEN`: required for the free-plan connection webhook; copy the one-time token from the verification request into this private variable before activating the subscription.
+- `NOTION_SOCIAL_POSTS_DATABASE_ID`: the `Social Post Drafts` data-source ID.
 
-`NOTION_API_KEY` must have access to `Blog CMS Posts` and `Blog Series`; `NOTION_DATABASE_ID` must remain set to the CMS data-source ID. Set `NOTION_BLOG_SERIES_DATABASE_ID` to the `Blog Series` data-source ID before assigning any series.
+`NOTION_API_KEY` must have access to `Blog CMS Posts`, `Blog Series`, and `Social Post Drafts`; `NOTION_DATABASE_ID` must remain set to the CMS data-source ID. Set `NOTION_BLOG_SERIES_DATABASE_ID` to the `Blog Series` data-source ID before assigning any series. Social generation reuses `OPENAI_API_KEY` and `CMS_TEXT_MODEL`; it does not need an image model or social-platform credential.
 
 ## Newsletter Setup and Activation
 
@@ -122,4 +165,6 @@ The new endpoint set is `newsletter-subscribe`, `newsletter-confirm`, `resend-we
 
 ## Failure Recovery
 
-If a generation fails, the post remains unpublished, `Metadata State` becomes `Failed`, and `Metadata Error` contains the reason. Correct the title/content or environment configuration, then click `Generate Post Assets` again.
+If post-asset generation fails, the post remains unpublished, `Metadata State` becomes `Failed`, and `Metadata Error` contains the reason. Correct the title/content or environment configuration, then click `Generate Post Assets` again.
+
+If social generation fails, `Social Draft State` becomes `Failed` and `Social Draft Error` contains the reason. Missing title, body, slug, data-source access, schema, or model output is detected before any draft row is created. If Notion fails during row creation, the backend attempts to archive every newly created row before recording the CMS failure. Correct the prerequisite or mark old rows `Superseded`, then click `Generate Social Drafts` again.

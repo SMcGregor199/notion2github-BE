@@ -16,6 +16,7 @@ This Netlify site shares one production-deploy budget with the frontend and ever
 - Provides an RSS auto-update path for refreshed blog data when production RSS env configuration enables it.
 - Provides a deployed RSS feed function that serves the configured generated RSS Blob.
 - Provides a sitemap function that reads the current published-post Blob manifest without refreshing content.
+- Generates six reviewable LinkedIn/Substack social drafts in Notion without publishing or scheduling them.
 
 ## Commands
 
@@ -38,10 +39,11 @@ For the one-time Notion database button and automation configuration, see [docs/
 - When `NOTION_DATABASE_ID` is configured, blog posts are read from a Notion database/data source instead of child pages under `NOTION_PAGE_ID`. This value may be either the database ID or a `collection://...` data source ID.
 - The Notion CMS database uses `Name`, `Published`, `Tag`, `Summary`, `Slug`, `Feature Image`, `Publication Date`, and an optional single-value `Series` relation. Only posts with `Published` checked are returned publicly.
 - Series are authored in a separate `Blog Series` data source with `Name`, stable `Slug`, optional `Description`, and its reciprocal `Posts` relation. Set private `NOTION_BLOG_SERIES_DATABASE_ID` to that data source ID. Public posts receive optional `{ name, slug, description? }` series metadata; missing or unavailable series configuration leaves posts public without series metadata.
-- CMS authoring adds a computed `Status`, `CMS Record ID`, `Metadata State`, `Metadata Error`, and a `Generate Metadata` button. `Published` remains the publication source of truth; Notion calculates `Status` from it.
+- CMS authoring adds a computed `Status`, `CMS Record ID`, metadata and social-draft state/error fields, and separate `Generate Post Assets` and `Generate Social Drafts` buttons. `Published` remains the publication source of truth; Notion calculates `Status` from it.
 - `cms-notion-webhook` receives signed Notion connection events, so Free-plan database buttons can queue metadata generation and `Published` toggles can sync public blog/RSS data. The paid-plan `cms-generate` and `cms-publish-sync` automation endpoints remain supported.
+- The same connection webhook can queue social-copy generation through `Social Draft State`. The backend writes six editable pages to the private `Social Post Drafts` data source, uses only its `Published` rows as voice references, and refuses to replace non-superseded rows.
 - Blog subscriptions use a private Notion `Blog Subscribers` data source as the CRM. Resend is a delivery mirror for double opt-in confirmation emails, subscribed contacts, broadcasts, hosted unsubscription, and signed delivery webhooks. See `docs/notion-cms-automation.md` for the required Notion schema, Resend/DNS activation checklist, and newsletter button workflow.
-- The CMS webhook environment variables are `NOTION_WEBHOOK_VERIFICATION_TOKEN`, `CMS_WEBHOOK_SECRET`, `OPENAI_API_KEY`, `CMS_TEXT_MODEL`, `CMS_IMAGE_MODEL`, and `CMS_IMAGE_QUALITY`. The default image model is `gpt-image-2` at high quality.
+- The CMS webhook environment variables are `NOTION_WEBHOOK_VERIFICATION_TOKEN`, `CMS_WEBHOOK_SECRET`, `OPENAI_API_KEY`, `CMS_TEXT_MODEL`, `CMS_IMAGE_MODEL`, `CMS_IMAGE_QUALITY`, and `NOTION_SOCIAL_POSTS_DATABASE_ID`. The default image model is `gpt-image-2` at high quality.
 - Database-backed posts expose Markdown body content as `bodyMarkdown`; legacy child-page mode still includes the older nested `body` structure for compatibility.
 - Notion file/media feature images and page covers are registered in Netlify Blobs and served through `netlify/functions/notion-image`.
 - RSS auto-update is gated by `RSS_AUTO_UPDATE_ON_BLOG_REFRESH`; production activation currently uses `true` for the approved RSS function context.

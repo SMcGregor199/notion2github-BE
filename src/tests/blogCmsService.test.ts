@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 const mockRefreshPublishedBlogData = vi.hoisted(() => vi.fn());
 const mockGetPageBodyMarkdown = vi.hoisted(() => vi.fn());
+const mockGenerateSocialDraftsForPageId = vi.hoisted(() => vi.fn());
 
 vi.mock("../../utils/fetchAndStoreLatestData.js", () => ({
   default: mockRefreshPublishedBlogData,
@@ -9,6 +10,14 @@ vi.mock("../../utils/fetchAndStoreLatestData.js", () => ({
 
 vi.mock("../../utils/helper.js", () => ({
   getPageBodyMarkdown: mockGetPageBodyMarkdown,
+}));
+
+vi.mock("../cms/socialDraftService.js", () => ({
+  SOCIAL_DRAFT_PROPERTIES: {
+    cmsState: "Social Draft State",
+    cmsError: "Social Draft Error",
+  },
+  generateSocialDraftsForPageId: mockGenerateSocialDraftsForPageId,
 }));
 
 import {
@@ -40,6 +49,7 @@ afterEach(() => {
   else process.env.NOTION_BLOG_SERIES_DATABASE_ID = originalNotionBlogSeriesDatabaseId;
   mockRefreshPublishedBlogData.mockReset();
   mockGetPageBodyMarkdown.mockReset();
+  mockGenerateSocialDraftsForPageId.mockReset();
 });
 
 describe("blog CMS metadata helpers", () => {
@@ -146,6 +156,24 @@ describe("blog CMS metadata helpers", () => {
       .resolves.toEqual({ actions: ["publicData"] });
 
     expect(mockRefreshPublishedBlogData).toHaveBeenCalledOnce();
+  });
+
+  it("generates social drafts when the Notion button queues the social state", async () => {
+    process.env.NOTION_DATABASE_ID = "cms-data-source";
+    process.env.NOTION_API_KEY = "test-notion-key";
+    const page = cmsPage({ published: false, isLocked: false });
+    (page.properties as Record<string, unknown>)["Social Draft State"] = {
+      id: "social-draft-state-property",
+      select: { name: "Queued" },
+    };
+    globalThis.fetch = vi.fn().mockResolvedValue(jsonResponse(page));
+    mockGenerateSocialDraftsForPageId.mockResolvedValue({ pageId: "page-123", created: 6 });
+
+    await expect(processCmsPagePropertyUpdate("page-123", ["social-draft-state-property"]))
+      .resolves.toEqual({ actions: ["socialDrafts"] });
+
+    expect(mockGenerateSocialDraftsForPageId).toHaveBeenCalledWith("page-123");
+    expect(mockRefreshPublishedBlogData).not.toHaveBeenCalled();
   });
 
   it("refreshes public blog data when a published post changes its series relation", async () => {
