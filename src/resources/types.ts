@@ -36,6 +36,7 @@ export type ResourceGuideStore = {
   get(key: string, options: { type: "json" }): Promise<unknown>;
   set(key: string, value: string): Promise<void>;
   setJSON(key: string, value: unknown): Promise<void>;
+  delete(key: string): Promise<void>;
 };
 
 export type ResourceGuideNotionClient = {

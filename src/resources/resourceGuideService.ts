@@ -12,7 +12,7 @@ export const RESOURCE_GUIDE_MANIFEST_KEY = "guide/manifest.json";
 export const RESOURCE_GUIDE_CONTENT_PREFIX = "guide/content/";
 export const DEFAULT_RESOURCE_GUIDE_CACHE_TTL_MS = 60 * 60 * 1000;
 
-const PROPERTIES = {
+export const RESOURCE_GUIDE_PROPERTIES = {
   title: "Name",
   url: "URL",
   publicationStatus: "Publication Status",
@@ -94,7 +94,7 @@ export async function queryPublishedResourcePages(
       page_size: 100,
       ...(cursor ? { start_cursor: cursor } : {}),
       filter: {
-        property: PROPERTIES.publicationStatus,
+        property: RESOURCE_GUIDE_PROPERTIES.publicationStatus,
         select: { equals: "Published" },
       },
     });
@@ -109,11 +109,11 @@ export function normalizeResourcePage(page: unknown): NormalizedResource | null 
   const record = asRecord(page);
   const properties = asRecord(record?.properties);
   const id = stringValue(record?.id);
-  const title = richText(properties?.[PROPERTIES.title], "title");
-  const url = safeHttpUrl(urlProperty(properties?.[PROPERTIES.url]));
+  const title = richText(properties?.[RESOURCE_GUIDE_PROPERTIES.title], "title");
+  const url = safeHttpUrl(urlProperty(properties?.[RESOURCE_GUIDE_PROPERTIES.url]));
   const dateAdded = validDate(stringValue(record?.created_time));
 
-  if (!id || !title || !url || !dateAdded || !isPublished(properties?.[PROPERTIES.publicationStatus])) {
+  if (!id || !title || !url || !dateAdded || !isPublished(properties?.[RESOURCE_GUIDE_PROPERTIES.publicationStatus])) {
     return null;
   }
 
@@ -121,21 +121,30 @@ export function normalizeResourcePage(page: unknown): NormalizedResource | null 
     id,
     title,
     url,
-    category: selectName(properties?.[PROPERTIES.category]) || "Uncategorized",
+    category: selectName(properties?.[RESOURCE_GUIDE_PROPERTIES.category]) || "Uncategorized",
     dateAdded,
-    disciplines: multiSelectNames(properties?.[PROPERTIES.disciplines]),
-    researchStages: multiSelectNames(properties?.[PROPERTIES.researchStages]),
-    aiRoles: multiSelectNames(properties?.[PROPERTIES.aiRoles]),
-    tags: multiSelectNames(properties?.[PROPERTIES.tags]),
-    ...optional("resourceType", selectName(properties?.[PROPERTIES.resourceType])),
-    ...optional("source", richText(properties?.[PROPERTIES.source], "rich_text")),
-    ...optional("creator", richText(properties?.[PROPERTIES.creator], "rich_text")),
-    ...optional("publishedDate", validDate(dateProperty(properties?.[PROPERTIES.publicationDate]))),
-    ...optional("description", richText(properties?.[PROPERTIES.description], "rich_text")),
-    ...optional("publicAnnotation", richText(properties?.[PROPERTIES.publicAnnotation], "rich_text")),
+    disciplines: multiSelectNames(properties?.[RESOURCE_GUIDE_PROPERTIES.disciplines]),
+    researchStages: multiSelectNames(properties?.[RESOURCE_GUIDE_PROPERTIES.researchStages]),
+    aiRoles: multiSelectNames(properties?.[RESOURCE_GUIDE_PROPERTIES.aiRoles]),
+    tags: multiSelectNames(properties?.[RESOURCE_GUIDE_PROPERTIES.tags]),
+    ...optional("resourceType", selectName(properties?.[RESOURCE_GUIDE_PROPERTIES.resourceType])),
+    ...optional("source", richText(properties?.[RESOURCE_GUIDE_PROPERTIES.source], "rich_text")),
+    ...optional("creator", richText(properties?.[RESOURCE_GUIDE_PROPERTIES.creator], "rich_text")),
+    ...optional("publishedDate", validDate(dateProperty(properties?.[RESOURCE_GUIDE_PROPERTIES.publicationDate]))),
+    ...optional("description", richText(properties?.[RESOURCE_GUIDE_PROPERTIES.description], "rich_text")),
+    ...optional("publicAnnotation", richText(properties?.[RESOURCE_GUIDE_PROPERTIES.publicAnnotation], "rich_text")),
   };
 
-  return { resource, sortPriority: numberProperty(properties?.[PROPERTIES.sortPriority]) };
+  return { resource, sortPriority: numberProperty(properties?.[RESOURCE_GUIDE_PROPERTIES.sortPriority]) };
+}
+
+/**
+ * Removes only the Resource Guide freshness pointer.  Content snapshots are
+ * immutable and may remain in the store; the next guide request rebuilds the
+ * manifest from Notion instead of waiting for the normal TTL.
+ */
+export async function invalidateResourceGuideManifest(store: Pick<ResourceGuideStore, "delete">): Promise<void> {
+  await store.delete(RESOURCE_GUIDE_MANIFEST_KEY);
 }
 
 async function resolveDataSourceId(notion: ResourceGuideNotionClient, databaseOrDataSourceId: string): Promise<string> {
@@ -204,7 +213,11 @@ function compareResources(left: NormalizedResource, right: NormalizedResource): 
   const leftPriority = left.sortPriority ?? Number.POSITIVE_INFINITY;
   const rightPriority = right.sortPriority ?? Number.POSITIVE_INFINITY;
   if (leftPriority !== rightPriority) return leftPriority - rightPriority;
-  return right.resource.dateAdded.localeCompare(left.resource.dateAdded) || left.resource.title.localeCompare(right.resource.title);
+  const leftPublicationDate = left.resource.publishedDate ?? "";
+  const rightPublicationDate = right.resource.publishedDate ?? "";
+  return rightPublicationDate.localeCompare(leftPublicationDate)
+    || right.resource.dateAdded.localeCompare(left.resource.dateAdded)
+    || left.resource.title.localeCompare(right.resource.title);
 }
 
 function isFresh(fetchedAt: string, now: Date, cacheTtlMs: number): boolean {
