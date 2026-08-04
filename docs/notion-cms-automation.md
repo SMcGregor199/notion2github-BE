@@ -109,6 +109,30 @@ The newsletter requires a non-empty intro and a valid LinkedIn discussion URL. I
 
 The public webhook verifies the signed Notion event, then starts a protected Netlify Background Function for long-running generation work. Notion receives an immediate acknowledgement while the background job can continue safely. The webhook reacts when `Metadata State` or `Social Draft State` changes to `Queued`, when `Published` changes, when a published post's `Series` relation changes, when a `Blog Series` name, slug, or description changes, or when a page is globally unlocked. Changing `Published` to either checked or unchecked aligns the native page lock and refreshes public blog/RSS data. Globally unlocking a published post clears `Published` and refreshes public data.
 
+## Resource Guide URL Enrichment
+
+This is a separate workflow from the blog CMS, social drafts, newsletter, and RSS. It never changes blog data or cache state.
+
+Share the Resource Guide data source with the existing Notion integration, then add these exact properties:
+
+- `Enrichment State` — **Select**: `New`, `Queued`, `Processing`, `Ready`, `Failed`
+- `Enrichment Error` — **Text**
+- `Enrich Resource` — **Button**
+
+Configure `Enrich Resource` to edit **This page**, set `Enrichment State` to `Queued`, and clear `Enrichment Error`. Do not add a paid automation or direct webhook action. Create a `New Resource` database template with `Name` set to `Untitled Resource`, `Publication Status` set to `Draft`, and `Enrichment State` set to `New`. The only required author input is `URL`.
+
+Create a dedicated Notion connection-webhook subscription for:
+
+`https://shaynemcgregordev-be.netlify.app/.netlify/functions/resource-guide-notion-webhook`
+
+Select only `page.properties_updated`. Copy its one-time verification token from the function log into the private backend variable `RESOURCE_GUIDE_WEBHOOK_VERIFICATION_TOKEN`, redeploy, then paste the same token into Notion's verification dialog. This endpoint uses a different token from the blog CMS webhook and starts the protected `resource-guide-notion-webhook-background` worker.
+
+The worker processes a Resource Guide page only when its state is `Queued`, then records `Processing`, `Ready`, or `Failed`. It retrieves the supplied URL directly and accepts only public HTTP(S) HTML pages with safe redirects, bounded response size, and a timeout. Blocked, paywalled, JavaScript-only, non-HTML, private-address, or unreadable sources become `Failed` with a short recovery-oriented error; no web-search fallback, source HTML, or article text is retained. It uses the existing server-side OpenAI key to replace only automation-owned metadata fields. `URL`, `Public Annotation`, `Private Research Notes`, `Publication Status`, `Featured`, and `Sort Priority` are never written by enrichment. New records remain Draft for review.
+
+Set optional `RESOURCE_GUIDE_TEXT_MODEL` to override the text model. Without it, enrichment uses `CMS_TEXT_MODEL`, then `gpt-5.6-luna`. It also requires the existing `OPENAI_API_KEY`, `NOTION_API_KEY`, and `NOTION_RESOURCES_DATABASE_ID`. Generated category/type/discipline/stage/AI-role values are restricted to the current Notion schema. Tags may be newly added by the integration and are normalized and deduplicated (for example `AI`, `LLM`, and `UN` retain capitals).
+
+Any Resource Guide public-data or publication-status change deletes only the Resource Guide Blob manifest. The next `/resource-guide-data` request rebuilds that guide snapshot immediately; blog JSON, RSS, and their caches are not touched.
+
 ### Optional Paid-plan Automations
 
 If the workspace later moves to a paid Notion plan, the existing direct endpoints remain available for database automations:

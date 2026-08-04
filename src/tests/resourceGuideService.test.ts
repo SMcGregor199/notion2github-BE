@@ -12,6 +12,7 @@ class MemoryStore {
   async get(key: string): Promise<unknown> { return this.values.get(key); }
   async set(key: string, value: string): Promise<void> { this.values.set(key, JSON.parse(value)); }
   async setJSON(key: string, value: unknown): Promise<void> { this.values.set(key, value); }
+  async delete(key: string): Promise<void> { this.values.delete(key); }
 }
 
 function resourcePage(overrides: Record<string, unknown> = {}) {
@@ -72,6 +73,43 @@ describe("Resource Guide pipeline", () => {
     expect(second.stale).toBe(false);
     expect(notion.dataSources.query).toHaveBeenCalledTimes(1);
     expect(store.values.get(RESOURCE_GUIDE_MANIFEST_KEY)).toEqual(expect.objectContaining({ fetchedAt: now.toISOString() }));
+  });
+
+  it("orders resources by newest publication date after an optional sort-priority override", async () => {
+    const store = new MemoryStore();
+    const newest = {
+      ...resourcePage({
+        Name: { type: "title", title: [{ plain_text: "Newest publication" }] },
+        "Publication Date": { type: "date", date: { start: "2026-07-31" } },
+      }),
+      id: "newest",
+      created_time: "2026-08-01T12:00:00.000Z",
+    };
+    const oldest = {
+      ...resourcePage({
+        Name: { type: "title", title: [{ plain_text: "Older publication" }] },
+        "Publication Date": { type: "date", date: { start: "2026-06-27" } },
+      }),
+      id: "oldest",
+      created_time: "2026-08-03T12:00:00.000Z",
+    };
+    const priority = {
+      ...resourcePage({
+        Name: { type: "title", title: [{ plain_text: "Priority override" }] },
+        "Publication Date": { type: "date", date: { start: "2026-01-01" } },
+        "Sort Priority": { type: "number", number: 1 },
+      }),
+      id: "priority",
+    };
+
+    const result = await loadResourceGuide({
+      store,
+      notion: notionWithPages([oldest, newest, priority]),
+      databaseId: "database-1",
+      now: new Date("2026-08-04T12:00:00.000Z"),
+    });
+
+    expect(result.response.resources.map(({ id }) => id)).toEqual(["priority", "newest", "oldest"]);
   });
 
   it("serves a stale snapshot when refresh fails", async () => {
