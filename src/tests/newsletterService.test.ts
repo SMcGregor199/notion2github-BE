@@ -50,7 +50,7 @@ describe("newsletter service helpers", () => {
     expect(isResendWebhookValid(rawBody, headers)).toBe(false);
   });
 
-  it("renders an escaped, unsubscribe-enabled newsletter", () => {
+  it("renders an escaped, narrow white newsletter with direct links", () => {
     const html = renderNewsletterEmail({
       intro: "Hello <readers>",
       title: "A <better> cache",
@@ -63,6 +63,12 @@ describe("newsletter service helpers", () => {
     expect(html).toContain("Hello &lt;readers&gt;");
     expect(html).toContain("{{{RESEND_UNSUBSCRIBE_URL}}}");
     expect(html).toContain("https://shaynemcgregor.dev/blog/better-cache");
+    expect(html).toContain('role="presentation" width="100%"');
+    expect(html).toContain('width="680"');
+    expect(html).toContain('bgcolor="#ffffff"');
+    expect(html).toContain('max-width:640px');
+    expect(html).toContain('href="https://www.linkedin.com/posts/example"');
+    expect(html).not.toContain("linkedin://");
   });
 
   it("never creates a second broadcast for a page already marked sent", async () => {
