@@ -287,7 +287,11 @@ export async function processCmsPagePropertyUpdate(
     actions.push("publication");
   }
 
-  const publicPostDataChanged = [CMS_PROPERTIES.linkedinDiscussionUrl, CMS_PROPERTIES.series]
+  const publicPostDataChanged = [
+    CMS_PROPERTIES.publicationDate,
+    CMS_PROPERTIES.linkedinDiscussionUrl,
+    CMS_PROPERTIES.series,
+  ]
     .some((property) => changed.has(getPropertyId(page, property)));
   if (publicPostDataChanged && !publicationChanged && getCheckboxValue(page, CMS_PROPERTIES.published)) {
     await refreshPublishedBlogData();

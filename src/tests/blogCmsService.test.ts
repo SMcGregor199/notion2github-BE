@@ -158,6 +158,25 @@ describe("blog CMS metadata helpers", () => {
     expect(mockRefreshPublishedBlogData).toHaveBeenCalledOnce();
   });
 
+  it("refreshes public blog data when a published post receives its publication date", async () => {
+    process.env.NOTION_DATABASE_ID = "cms-data-source";
+    process.env.NOTION_API_KEY = "test-notion-key";
+    const page = {
+      id: "page-123",
+      parent: { type: "data_source_id", id: "cms-data-source" },
+      properties: {
+        Published: { id: "published-property", checkbox: true },
+        "Publication Date": { id: "publication-date-property", date: { start: "2026-08-11T12:54:00.000Z" } },
+      },
+    };
+    globalThis.fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify(page), { status: 200 }));
+
+    await expect(processCmsPagePropertyUpdate("page-123", ["publication-date-property"]))
+      .resolves.toEqual({ actions: ["publicData"] });
+
+    expect(mockRefreshPublishedBlogData).toHaveBeenCalledOnce();
+  });
+
   it("generates social drafts when the Notion button queues the social state", async () => {
     process.env.NOTION_DATABASE_ID = "cms-data-source";
     process.env.NOTION_API_KEY = "test-notion-key";
